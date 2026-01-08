@@ -1,0 +1,61 @@
+#
+# FILE: home/.bashexports
+# ──────────────────────────────────────────────────────────────
+# GLOBALE UMGEBUNGSVARIABLEN FÜR TOOLS UND EDITOREN
+# ──────────────────────────────────────────────────────────────
+# Zweck:    Konfiguration von Standard-Editoren, Pagern und Locales.
+#           Steuert das Verhalten von Drittanbieter-Anwendungen.
+# Abhängigkeiten: .bashenv (für $PLATFORM).
+# ──────────────────────────────────────────────────────────────
+
+# @section 1. Standard-Editor & Pager
+# Festlegung der Standard-Werkzeuge für Textbearbeitung und Ansicht.
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    # Dynamische Editor-Wahl unter Linux (Priorität: micro > nano > vi)
+    if command -v micro >/dev/null 2>&1; then
+        export EDITOR="micro"
+    elif command -v nano >/dev/null 2>&1; then
+        export EDITOR="nano"
+    else
+        export EDITOR="vi"
+    fi
+else
+    # Windows-Spezifische Editoren (Git Bash / MSYS2 Pfade)
+    # Bevorzugt Notepad++ oder VS Code, falls im PATH vorhanden
+    if command -v notepad++.exe >/dev/null 2>&1; then
+        export EDITOR="notepad++.exe"
+    elif [[ -f "/c/Program Files/Notepad++/notepad++.exe" ]]; then
+        export EDITOR="/c/Program Files/Notepad++/notepad++.exe"
+    else
+        export EDITOR="notepad.exe"
+    fi
+fi
+
+# VISUAL wird für Editoren genutzt, die eine UI/Vollbild benötigen
+export VISUAL="$EDITOR"
+export PAGER="less"
+
+# LESS-Optionen:
+# -R: Interpretiert ANSI-Farbcodes korrekt (wichtig für farbige Logs/Diffs)
+# -F: Beendet less automatisch, wenn der Inhalt auf einen Schirm passt
+# -X: Verhindert das Löschen des Inhalts vom Schirm nach dem Beenden
+export LESS="-RFX"
+
+# @section 2. Sprache / Zeichensatz (Locale)
+# Sicherstellung einer korrekten Darstellung von Umlauten.
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    export LANG="de_DE.UTF-8"
+    export LC_ALL="de_DE.UTF-8"
+else
+    export LANG="en_US.UTF-8"
+    export LC_ALL="en_US.UTF-8"
+fi
+
+# @section 3. Lokale Erweiterungen
+# Ermöglicht systemspezifische Exporte (z.B. API-Keys), die nicht im Repo landen.
+if [[ -f "$HOME/.bash_exports_local" ]]; then
+    # shellcheck disable=SC1091
+    source "$HOME/.bash_exports_local"
+fi
+
+true

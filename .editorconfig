@@ -1,0 +1,67 @@
+#
+# FILE: .editorconfig
+# ──────────────────────────────────────────────────────────────
+# ZENTRALE EDITOR-KONFIGURATION (v1.2.1)
+# ──────────────────────────────────────────────────────────────
+# Zweck:       Sicherstellung einheitlicher Codierung und Formatierung.
+#              Verhindert "Whitespace-Diffs" und CRLF-Konflikte.
+# Geltungsbereich: Das gesamte Repository (root=true).
+# ──────────────────────────────────────────────────────────────
+
+root = true
+
+# ──────────────────────────────────────────────────────────────
+# 1. Globale Standardkonfiguration
+# ──────────────────────────────────────────────────────────────
+[*]
+charset = utf-8
+end_of_line = lf                # Unix-Zeilenenden erzwingen (Wichtig für Shell)
+insert_final_newline = true     # POSIX-konforme Leerzeile am Ende
+trim_trailing_whitespace = true # Entfernt Leerzeichen am Zeilenende
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# ──────────────────────────────────────────────────────────────
+# 2. Shell-Skripte & Dotfiles
+# ──────────────────────────────────────────────────────────────
+# Deckt alle Shell-Skripte und die im Projekt genutzten Dotfiles ab.
+[*.{sh,bash}]
+indent_style = space
+indent_size = 4
+
+# Spezifische Erfassung von Bash-Dateien ohne klassische Endung
+[{.bash*,.dircolors,.nanorc,.editorconfig,bashrc,bashenv,bashaliases}]
+indent_style = space
+indent_size = 4
+
+# ──────────────────────────────────────────────────────────────
+# 3. Dokumentation (Markdown)
+# ──────────────────────────────────────────────────────────────
+[*.md]
+max_line_length = off
+# Hard-Breaks in Markdown (2 Leerzeichen) dürfen nicht gelöscht werden:
+trim_trailing_whitespace = false
+indent_style = space
+indent_size = 4
+
+# ──────────────────────────────────────────────────────────────
+# 4. Datenstrukturen (YAML/JSON)
+# ──────────────────────────────────────────────────────────────
+[*.{yml,yaml,json,jsonc}]
+indent_style = space
+indent_size = 2
+
+# ──────────────────────────────────────────────────────────────
+# 5. Windows-spezifische Skripte (Optional)
+# ──────────────────────────────────────────────────────────────
+# Falls PowerShell oder Batch nativ unter Windows verbleiben müssen:
+[*.{bat,ps1}]
+end_of_line = crlf
+
+# ──────────────────────────────────────────────────────────────
+# 6. Build-Systeme
+# ──────────────────────────────────────────────────────────────
+[{Makefile,makefile}]
+indent_style = tab              # Makefiles erfordern zwingend Tabs!
+indent_size = 4

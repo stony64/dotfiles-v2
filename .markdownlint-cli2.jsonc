@@ -1,0 +1,33 @@
+{
+  // FILE: markdownlint-cli2.jsonc
+  // ──────────────────────────────────────────────────────────────
+  // KONFIGURATION FÜR MARKDOWNLINT-CLI2 (v1.2.1)
+  // ──────────────────────────────────────────────────────────────
+  // Zweck:       Steuerung des Linting-Prozesses für die Doku.
+  // Korrektur:   Entfernung unzulässiger Top-Level Eigenschaften.
+  // ──────────────────────────────────────────────────────────────
+
+  "ignores": [
+    "node_modules/**",
+    ".git/**",
+    "**/_exports/**",
+    "**/*.bak",
+    "**/*_local.md",
+    "**/local_*.md",
+    "**/test_sandbox/**"
+  ],
+
+  "globs": [
+    "**/*.md"
+  ],
+
+  "config": {
+    "extends": "./.markdownlint.jsonc",
+    // Falls HTML-Tags innerhalb von MD-Regeln (wie MD033) Probleme machen,
+    // wird dies direkt in der .markdownlint.jsonc über "MD033": false gelöst.
+    "no-inline-html": false
+  },
+
+  "fix": false,
+  "noInlineConfig": false
+}

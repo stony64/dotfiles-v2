@@ -1,0 +1,75 @@
+# FILE: .github/workflows/release.yml
+# ──────────────────────────────────────────────────────────────
+# GITHUB ACTION: AUTOMATED RELEASE (v1.2.1)
+# ──────────────────────────────────────────────────────────────
+# Zweck:       Validiert den Code (Linting & Tests) und erstellt
+#              bei erfolgreichem v*-Tag ein GitHub Release.
+# ──────────────────────────────────────────────────────────────
+
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # ──────────────────────────────────────────────────────────────
+  # 1. VALIDIERUNG (Quality Gate)
+  # ──────────────────────────────────────────────────────────────
+  test:
+    name: Validate Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          # Scannt das Root-Verzeichnis und deine Bibliotheken
+          scandir: '.'
+          # Nutzt deine .shellcheckrc Konfiguration
+          ignore: 'node_modules'
+
+      - name: Run Test Suite
+        run: |
+          # Setzt Ausführungsrechte für den CI-Lauf
+          chmod +x dotfilesctl.sh test_suite.sh lib/*.sh
+          # Führt die Sandbox-Tests aus
+          ./test_suite.sh
+
+  # ──────────────────────────────────────────────────────────────
+  # 2. RELEASE-JOB
+  # ──────────────────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Dotfiles v1.2.1
+            Automatisches Release der Plattform-unabhängigen Dotfiles.
+
+            ### Änderungen
+            - Vollständige Modularisierung (lib/ Struktur)
+            - Native Windows Symlink Unterstützung
+            - Integrierte Health-Checks (dctl doctor)
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          # Wir listen hier keine einzelnen Dateien, da das Repo-Zip
+          # bereits alles enthält. LICENSE und README sind dort inkludiert.

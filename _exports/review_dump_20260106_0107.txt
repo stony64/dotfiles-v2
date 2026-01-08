@@ -1,0 +1,2878 @@
+======================================================================
+CODE REVIEW DUMP - Generated: 01/06/2026 01:07:14
+STRUCTURE: DOCS -> CI/CD -> CONFIG -> LIBS -> MAIN -> TESTS
+======================================================================
+File Path                                               |    Lines
+----------------------------------------------------------------------
+docs\docs_styleguide_bash.md                            |       58
+docs\docs_styleguide_general.md                         |       44
+docs\install.md                                         |       83
+README.md                                               |       78
+.github\release.yml                                     |       63
+.github\workflows\lint-markdown.yaml                    |       31
+.editorconfig                                           |       66
+.markdownlint-cli2.jsonc                                |       24
+.markdownlint.jsonc                                     |       49
+lib\libcolors.sh                                        |       46
+lib\libconstants.sh                                     |       78
+lib\libchecks.sh                                        |      113
+lib\libcommon.sh                                        |       75
+lib\libengine.sh                                        |      139
+lib\libplatform_linux.sh                                |       49
+lib\libplatform_windows.sh                              |       73
+dotfilesctl.sh                                          |      267
+test_suite.sh                                           |      137
+.gitattributes                                          |       76
+.gitignore                                              |       83
+config\mc\ini                                           |      148
+config\micro\bindings.json                              |       25
+config\micro\settings.json                              |        9
+home\.bashaliases                                       |       71
+home\.bashenv                                           |       90
+home\.bashexports                                       |       51
+home\.bashfunctions                                     |      126
+home\.bashprompt                                        |       91
+home\.bashrc                                            |      108
+home\.dircolors                                         |      148
+home\.nanorc                                            |       86
+----------------------------------------------------------------------
+TOTAL (31 Files)                                        |     2585
+======================================================================
+
+
+
+#################################################################
+### BEGIN FILE: docs\docs_styleguide_bash.md
+#################################################################
+
+# 🐚 Bash Code Style Guide (dotfiles.git)
+
+Version 1.2 | Stand: 2026-01-05
+
+Dieser Guide ist verbindlich für `dotfilesctl.sh` und alle Dateien unter `lib/*.sh`. Er zielt auf maximale Portabilität zwischen Linux und Windows (Git Bash) sowie auf sauberes Linting (ShellCheck) ab.
+
+## ⚙️ Interpreter & Strict Mode
+
+- **Shebang:** `#!/usr/bin/env bash` (Portabilität via `/usr/bin/env`).
+- **Strict Mode:** `set -euo pipefail` im Entry-Point. In Libraries wird dieser Zustand durch den Aufrufer vererbt.
+- **Libraries:** Enden immer mit `true`. Sie enthalten **nur** Funktionsdefinitionen und Variablen – keine direkten Befehlsausführungen beim Laden.
+
+## 📁 Repository Architektur & Sourcing
+
+Die Ladereihenfolge ist strikt einzuhalten, um zirkuläre Abhängigkeiten zu vermeiden:
+
+1. `libcolors.sh`: Atomare ANSI-Definitionen.
+2. `libconstants.sh`: UI-Elemente, Pfade, Whitelists.
+3. `libcommon.sh`: Kern-Hilfsfunktionen (`log`, `die`, `run`).
+4. **Funktions-Module:** Plattform-Logik, Engine und Diagnose-Tools.
+
+## 📝 Dokumentations-Standard (Neu)
+
+Jede Funktion muss einen Header im Javadoc-Stil besitzen, um die Lesbarkeit und automatische Dokumentation zu unterstützen:
+
+```bash
+# @description Kurze Beschreibung der Funktion.
+# @param $1 Beschreibung des ersten Parameters.
+# @stdout Art der Ausgabe (falls vorhanden).
+# @return EXIT_OK oder EXIT_FATAL.
+
+```
+
+## 📛 Benennung & Variablen
+
+- **Funktionen:** `Modulname_Funktionsname` (Namespacing, z. B. `engine_install_home`).
+- **Konstanten:** `UPPER_SNAKE_CASE` (konsequent `readonly` deklarieren).
+- **Lokale Variablen:** In Funktionen **zwingend** mit `local` deklarieren.
+- **Quoting:** Variablen immer in Double-Quotes: `"${VARIABLE}"`.
+- **Pfade:** Keine relativen Pfade; immer `${REPO_ROOT}/...` oder `${HOME}/...` verwenden.
+
+## 🎨 UI & Farben
+
+- **Keine Hardcodierten Farben:** Farben niemals direkt als `\e[...` im Code einbetten.
+- **Abstraktion:** Nutze `COL_RED` für Farben und `LOG_PREFIX_ERROR` für Statusmeldungen.
+- **Symbole:** Nutze `SYMBOL_OK`, `SYMBOL_WARN`, `SYMBOL_ERROR` für konsistente ASCII-Ausgaben.
+
+## 🚦 Exit-Codes & Fehlerbehandlung
+
+- Nutze Konstanten: `EXIT_OK` (0), `EXIT_FATAL` (1), `EXIT_WARN` (2).
+- **Fehlerabbruch:** Kritische Fehler via `die "Nachricht"` (Ausgabe nach stderr, exit 1).
+- **Validierung:** Nutze `has_cmd` oder `require_cmd`, um Abhängigkeiten vorab zu prüfen.
+
+## 🛡️ Sicherheit & Idempotenz
+
+- **Mutationen:** Schreibende Befehle (cp, ln, rm) sollten über den `run`-Wrapper ausgeführt werden (ermöglicht `--dry-run`).
+- **Idempotenz:** Vor jeder Aktion prüfen, ob der Zielzustand bereits erreicht ist (z. B. via `canon_path` Vergleich).
+- **Backup-Policy:** Bestehende Konfigurationen werden vor Änderungen nach `.bak` verschoben (Zeitstempel empfohlen), niemals ungefragt gelöscht.
+
+
+### END OF FILE: docs\docs_styleguide_bash.md
+
+#################################################################
+### BEGIN FILE: docs\docs_styleguide_general.md
+#################################################################
+
+# 🎨 Styleguide & Standards (Allgemein)
+
+Version 1.2 | Stand: 2026-01-05
+
+Dieser Guide definiert die technischen Standards für die Formatierung und Struktur aller Dateien in diesem Repository. Diese Regeln werden durch automatisierte Linter (`markdownlint`, `editorconfig-checker`) überwacht.
+
+## 🛠 Allgemeine Datei-Standards
+
+Alle Textdateien müssen diesen Grundregeln entsprechen, um Plattformkompatibilität (Windows/Linux) zu gewährleisten:
+
+- **Kodierung:** `UTF-8` (ohne BOM).
+- **Zeilenenden:** `LF` (Unix-Standard). 
+    - *Hinweis:* Die `.gitattributes` erzwingen `LF` beim Commit automatisch.
+- **Abschluss:** Jede Datei muss mit einer leeren Zeile enden (*Final Newline*).
+- **Einrückung:**
+    - Standard (Bash, Text): `4 Leerzeichen`.
+    - Struktur-Daten (YAML, JSON, JSONC): `2 Leerzeichen`.
+    - **Tabs** sind im gesamten Projekt untersagt.
+
+## 📝 Markdown Dokumentation
+
+Die Dokumentation folgt den `markdownlint`-Vorgaben (siehe `.markdownlint.jsonc`):
+
+### Struktur & Hierarchie
+
+- **H1-Regel:** Genau eine H1-Überschrift (`#`) pro Datei als Titel.
+- **Abfolge:** Überschriften stufenweise ohne Sprünge (H1 → H2 → H3).
+- **Listen:** Geordnete Listen im Quellcode immer mit `1.` beginnen (vereinfacht das Verschieben von Zeilen; Renderer zählt automatisch hoch).
+
+### Formatierung & Syntax
+
+- **Harte Zeilenumbrüche:** Erzwungen durch zwei Leerzeichen am Zeilenende (korrespondiert mit `files.trimTrailingWhitespace: false` für Markdown in VS Code).
+- **Code-Blöcke:** Zwingende Angabe der Sprache (z. B. ` ```bash `, ` ```jsonc `) für korrektes Syntax-Highlighting.
+
+## 📂 Lokale Anpassungen (*.local)
+
+Um die Trennung von öffentlichem Code und privaten Daten zu garantieren:
+
+- **Konvention:** Dateien mit dem Suffix `_local` oder der Endung `.local` (z. B. `.bash_env_local`, `gitconfig.local`) werden von Git ignoriert.
+- **Laden:** Die Haupt-Konfigurationen prüfen die Existenz dieser lokalen Dateien und laden sie nach (*Source-if-exists*).
+- **Sicherheit:** Private Schlüssel, API-Token oder maschinenspezifische Pfade gehören **ausschließlich** in diese lokalen Dateien.
+
+---
+*Dieser Styleguide ist bindend für alle Beiträge zum Repository.*
+
+
+### END OF FILE: docs\docs_styleguide_general.md
+
+#################################################################
+### BEGIN FILE: docs\install.md
+#################################################################
+
+# 🛠 Installations-Handbuch
+
+Diese Anleitung beschreibt die Installation und Verwaltung der Dotfiles mithilfe des zentralen Steuerungsskripts `dotfilesctl.sh`.
+
+## 📋 Voraussetzungen
+
+Bevor du beginnst, stelle sicher, dass die folgenden Bedingungen erfüllt sind:
+
+### Linux
+
+* `git` und `bash >= 4.0` müssen installiert sein.
+* **Root-Rechte (sudo):** Erforderlich für die Installation (`--all-users` oder `--user`), um auf die Home-Verzeichnisse anderer Benutzer zuzugreifen und Berechtigungen zu setzen.
+
+### Windows
+
+* **Entwicklermodus:** Muss in den Windows-Einstellungen aktiviert sein.
+* **Symlinks:** Wenn der Entwicklermodus aktiv ist, benötigt die Git Bash **keine** Administratorrechte mehr, um native Windows-Symlinks zu erstellen.
+
+---
+
+## 🚀 Befehle und Verwendung
+
+Das Skript `dotfilesctl.sh` ist modular aufgebaut und verarbeitet Befehle nach dem Schema: `./dotfilesctl.sh BEFEHL [OPTIONEN]`.
+
+### 1. Testlauf (Dry-Run)
+
+Bevor echte Änderungen am Dateisystem vorgenommen werden, empfiehlt sich eine Simulation. Es werden keine Dateien verändert, nur die geplanten Schritte ausgegeben.
+
+```bash
+# Linux: Simulation für alle erkannten Benutzer
+sudo ./dotfilesctl.sh install --dry-run --all-users
+
+# Windows: Simulation für den aktuellen Benutzer
+./dotfilesctl.sh install --dry-run
+
+```
+
+### 2. Echte Installation
+
+Führe die Verknüpfung der Dateien durch, wenn der Dry-Run fehlerfrei war.
+
+```bash
+# Linux: Installation für alle (Human-User ab UID 1000 + Root)
+sudo ./dotfilesctl.sh install --all-users
+
+# Windows: Lokale Installation
+./dotfilesctl.sh install
+
+```
+
+---
+
+## 🔍 Funktionsweise
+
+Das Skript arbeitet nach dem Prinzip der **Idempotenz** (mehrfache Ausführung führt zum gleichen Ergebnis) und nutzt **Symbolische Verknüpfungen (Symlinks)**.
+
+### Der Installations-Prozess:
+
+1. **Scan:** Das Skript prüft die Dateien im Verzeichnis `home/` gegen die in `lib/libconstants.sh` definierte `DOTFILES_WHITELIST`.
+2. **Integritätsprüfung:** Vor dem Linken prüft `libchecks.sh`, ob Pfade erreichbar und Tools vorhanden sind.
+3. **Backup-Logik:** - Existiert bereits eine **reale Datei** (kein Link) am Zielort, wird diese **nicht** gelöscht, sondern ignoriert (SKIP). Du musst diese manuell entfernen oder umbenennen.
+
+* Verzeichnisse in `config/` (z. B. für `micro`), die kopiert werden, erhalten bei Konflikten automatisch einen `.bak` Zeitstempel.
+
+1. **Verknüpfung:** Es wird ein Hard- oder Softlink erstellt (z. B. `~/.bashrc` -> `/opt/dotfiles/home/.bashrc`).
+
+---
+
+## 🛠 Diagnose & Wartung
+
+Sollten Probleme auftreten, bietet das Skript spezialisierte Diagnose-Tools:
+
+* **`./dotfilesctl.sh doctor`**: Der "Rundum-Check". Kombiniert den System-Check (Tools, Pfade, Rechte) mit einer Validierung aller gesetzten Symlinks.
+* **`./dotfilesctl.sh health`**: Prüft nur, ob die Umgebung bereit ist (Read-only).
+* **`./dotfilesctl.sh checksymlinks`**: Validiert, ob vorhandene Links im Home noch auf die richtigen Dateien im Repo zeigen.
+
+---
+
+## ⚠️ Sicherheitshinweise
+
+* **Sensible Daten:** Schreibe niemals Passwörter oder API-Keys direkt in die Repository-Dateien.
+* **Lokale Dateien:** Nutze für Geheimnisse Dateien mit der Endung `.local` (z. B. `.bash_env_local`). Diese werden von Git ignoriert und können maschinenspezifische Daten enthalten.
+* **Deinstallation:** Mit `./dotfilesctl.sh uninstall` kannst du die Symlinks sicher entfernen. Deine originalen `.bak`-Dateien müssen jedoch manuell wiederhergestellt werden.
+
+
+### END OF FILE: docs\install.md
+
+#################################################################
+### BEGIN FILE: README.md
+#################################################################
+
+# Dotfiles Repository
+
+Dieses Repository verwaltet Konfigurationsdateien für **Linux (Debian/Ubuntu)** und **Windows (Git Bash)**. Es nutzt eine modulare Architektur, um Plattformunterschiede sauber zu trennen und eine idempotente Installation zu gewährleisten.
+
+## 🏗 Struktur
+
+- **dotfilesctl.sh**: Zentraler Orchestrator (CLI).
+- **home/**: Dotfiles (wie `.bashrc`, `.nanorc`), die als Symlinks in das Home-Verzeichnis verlinkt werden.
+- **config/**: Statische Konfigurationen und Vorlagen (`.example`).
+- **lib/**: Modularisierte Shell-Bibliotheken für Farben, Konstanten und Engine-Logik.
+- **.github/workflows/**: CI/CD-Pipelines für automatisiertes Linting und Releases.
+
+## 🛠 Voraussetzungen
+
+### Linux
+
+- **Bash >= 4.0** und Standard-Tools (`git`, `ln`, `getent`).
+- **Root-Rechte**: Erforderlich für Multi-User Installationen (`--all-users`).
+
+### Windows
+
+- **Git Bash** (MinGW/MSYS2).
+- **Entwicklermodus**: Muss in den Windows-Einstellungen aktiviert sein, um native Symlinks ohne Administratorrechte zu ermöglichen.
+
+## 🚀 Installation
+
+1. **Repository klonen**:
+
+```bash
+   # Linux (Empfohlen unter /opt für Multi-User Support)
+   sudo git clone [https://github.com/dein-user/dotfiles.git](https://github.com/dein-user/dotfiles.git) /opt/dotfiles
+   
+   # Windows
+   git clone [https://github.com/dein-user/dotfiles.git](https://github.com/dein-user/dotfiles.git) ~/dotfiles
+
+```
+
+2. **Installation ausführen**:
+
+```bash
+cd /opt/dotfiles # bzw. ~/dotfiles
+
+# Linux (für alle validen System-User)
+sudo ./dotfilesctl.sh install --all-users
+
+# Windows
+./dotfilesctl.sh install
+
+```
+
+## 📋 Wichtige Befehle
+
+| Befehl | Beschreibung |
+| --- | --- |
+| `./dotfilesctl.sh doctor` | Vollständige Diagnose (System + Symlinks). |
+| `./dotfilesctl.sh health` | Prüft Abhängigkeiten, Pfade und Berechtigungen. |
+| `./dotfilesctl.sh update` | Führt `git pull` aus und validiert den Stand. |
+| `./test_suite.sh` | Startet automatisierte Funktionstests in einer Sandbox. |
+
+## 🔒 Lokale Anpassungen & Sicherheit
+
+Das System ist darauf ausgelegt, private Daten strikt vom Repository zu trennen. Folgende Dateimuster werden von Git ignoriert (`.gitignore`) und können für lokale Geheimnisse genutzt werden:
+
+- **Shell**: `*.local` oder `*_local` (z. B. `.bash_env_local`).
+- **Configs**: `config/*.local` für maschinenspezifische Einstellungen.
+- **SSH**: `config/ssh_keys.conf` (wird niemals hochgeladen).
+
+## 💎 Code Quality & Standards
+
+Um eine hohe Wartbarkeit zu garantieren, nutzt dieses Projekt:
+
+- **EditorConfig**: Konsistente Einrückung (4 Spaces für Shell, 2 für JSON).
+- **Markdownlint**: Validierung der Dokumentation gemäß `.markdownlint.jsonc`.
+- **ShellCheck**: Statische Analyse der Skripte via GitHub Actions.
+
+---
+
+**Hinweis**: Bestehende Dateien im Home-Verzeichnis werden bei der Installation automatisch mit der Endung `.bak` gesichert, bevor der Symlink gesetzt wird.
+
+
+### END OF FILE: README.md
+
+#################################################################
+### BEGIN FILE: .github\release.yml
+#################################################################
+
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # ──────────────────────────────────────────────────────────────
+  # 1. Validierung (Quality Gate)
+  # ──────────────────────────────────────────────────────────────
+  test:
+    name: Validate Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          # Prüft alle Shell-Skripte im Repo inklusive deiner neuen Libs
+          scandir: '.'
+          ignore: 'node_modules'
+
+      - name: Run Test Suite
+        run: |
+          # Sicherstellen, dass alle relevanten Skripte ausführbar sind
+          # Pfade wurden an deine Struktur angepasst (lib/ und root)
+          chmod +x dotfilesctl.sh test_suite.sh lib/*.sh
+          ./test_suite.sh
+
+  # ──────────────────────────────────────────────────────────────
+  # 2. Release-Job
+  # ──────────────────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          # Automatische Generierung basierend auf deinen Commits
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          # WICHTIG: Hier nur Artefakte listen, die nicht im Repo-Zip sind.
+          # Da dies ein Dotfile-Repo ist, reicht oft das Source-Archiv (automatisch).
+          # Wenn du ein Installations-Bundle schnüren willst, hier hinzufügen:
+          files: |
+            LICENSE
+            README.md
+
+
+### END OF FILE: .github\release.yml
+
+#################################################################
+### BEGIN FILE: .github\workflows\lint-markdown.yaml
+#################################################################
+
+name: Lint Markdown
+
+on:
+  push:
+    branches: [ main, master ]
+    # Verhindert unnötige Runs, wenn gar kein Markdown geändert wurde
+    paths:
+      - '**/*.md'
+      - '.markdownlint*'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - '**/*.md'
+      - '.markdownlint*'
+
+jobs:
+  markdownlint:
+    name: Markdown Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Markdownlint-cli2
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          # Wenn 'globs' weggelassen wird, nutzt die Action die 'globs'
+          # aus deiner .markdownlint-cli2.jsonc. Das ist sauberer,
+          # da du nur eine "Source of Truth" hast.
+          config: ".markdownlint-cli2.jsonc"
+
+
+### END OF FILE: .github\workflows\lint-markdown.yaml
+
+#################################################################
+### BEGIN FILE: .editorconfig
+#################################################################
+
+# FILE: .editorconfig
+#
+# Zentrale Editor-Konfiguration zur Sicherstellung einheitlicher Codierung.
+# Hilft dabei, "Whitespace-Diffs" in Git zu vermeiden und stellt sicher,
+# dass Tools wie Nano und VS Code die gleichen Einrückungen nutzen.
+#
+# Top-most EditorConfig file
+root = true
+
+# ──────────────────────────────────────────────────────────────
+# 1. Globale Standardkonfiguration
+# ──────────────────────────────────────────────────────────────
+# Diese Einstellungen gelten für alle Dateien, sofern sie unten
+# nicht spezifisch überschrieben werden.
+[*]
+charset = utf-8                # Dateikodierung (Standard für Cross-Plattform)
+end_of_line = lf               # Unix-Zeilenenden erzwingen (Wichtig für Shell-Skripte)
+insert_final_newline = true    # Immer eine Leerzeile am Ende (POSIX-Standard)
+trim_trailing_whitespace = true # Entfernt unnötige Leerzeichen am Zeilenende
+indent_style = space           # Leerzeichen statt Tabs (Konsistenz)
+indent_size = 4                # Einrückungstiefe (abgestimmt mit .nanorc)
+tab_width = 4                  # Anzeige-Breite für echte Tabs
+
+# Sonderregel für reine Textdateien ohne Endung
+[LICENSE]
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# ──────────────────────────────────────────────────────────────
+# 2. Shell-Skripte & Dotfiles
+# ──────────────────────────────────────────────────────────────
+# Spezifische Regeln für die Kern-Komponenten des Projekts.
+[*.{sh,bash}]
+indent_style = space
+indent_size = 4
+
+# Dotfiles (Konfigurationsdateien ohne oder mit spezieller Endung)
+[{.bash*,.dircolors,.nanorc,.editorconfig}]
+indent_style = space
+indent_size = 4
+
+# ──────────────────────────────────────────────────────────────
+# 3. Dokumentation (Markdown)
+# ──────────────────────────────────────────────────────────────
+[*.md]
+max_line_length = off          # Kein automatischer Umbruch im Quelltext
+# WICHTIG: In Markdown bedeuten zwei Leerzeichen am Zeilenende ein "Hard Break".
+# Daher wird das automatische Trimmen hier deaktiviert.
+trim_trailing_whitespace = false
+indent_style = space
+indent_size = 4
+
+# ──────────────────────────────────────────────────────────────
+# 4. Datenstrukturen (YAML/JSON)
+# ──────────────────────────────────────────────────────────────
+# Hier wird oft der Industriestandard von 2 Leerzeichen genutzt.
+[*.{yml,yaml,json,jsonc}]
+indent_style = space
+indent_size = 2
+
+# ──────────────────────────────────────────────────────────────
+# 5. Windows-spezifische Skripte
+# ──────────────────────────────────────────────────────────────
+# Batch-Dateien und PowerShell benötigen unter Windows oft CRLF.
+[*.{bat,ps1}]
+end_of_line = crlf
+
+
+### END OF FILE: .editorconfig
+
+#################################################################
+### BEGIN FILE: .markdownlint-cli2.jsonc
+#################################################################
+
+{
+  // Dateien/Pfade, die vom Linting ausgeschlossen werden
+  "ignores": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/_exports/**",
+    "**/*.bak",           // Synchron mit .gitignore
+    "**/*_local.md",      // Lokale Markdown-Notizen ignorieren
+    "**/local_*.md"
+  ],
+
+  // Dateimuster für Markdown-Dateien
+  "globs": [
+    "**/*.md"
+  ],
+
+  // Verweist auf die Regel-Datei
+  "extends": [
+    ".markdownlint.jsonc"
+  ],
+
+  "fix": false,
+  "noInlineConfig": false
+}
+
+
+### END OF FILE: .markdownlint-cli2.jsonc
+
+#################################################################
+### BEGIN FILE: .markdownlint.jsonc
+#################################################################
+
+{
+  // Globale Default-Regeln aktivieren
+  "default": true,
+
+  // MD013: Zeilenlänge deaktiviert (Style-Guide erlaubt lange Zeilen für besseres Git-Diff)
+  "MD013": false,
+
+  // MD001: Überschriften-Hierarchie erzwingen (H1 → H2 → H3)
+  "MD001": true,
+
+  // MD036: Kein Emphasis als Überschrift (Style-Guide: echte Headings nutzen)
+  "MD036": true,
+
+  // MD024: Doppelte Überschriften nur auf gleicher Ebene verhindern
+  "MD024": {
+    "siblings_only": true
+  },
+
+  // MD025: Maximal eine H1 pro Datei (Titel der Seite)
+  "MD025": {
+    "level": 1
+  },
+
+  // MD026: Satzzeichen am Ende von Überschriften erlaubt (wichtig für technische Fragen?)
+  "MD026": false,
+
+  // MD029: Geordnete Listen: alle mit "1." (einfachere Pflege bei Verschiebungen)
+  "MD029": {
+    "style": "ordered"
+  },
+
+  // MD007: Einrückung von Listen (4 Leerzeichen, konsistent zu .editorconfig)
+  "MD007": {
+    "indent": 4
+  },
+
+  // MD031: Leerzeilen um Codeblöcke erzwingen
+  "MD031": true,
+
+  // MD022: Leerzeilen um Überschriften erzwingen
+  "MD022": true,
+
+  // MD009: Abschließende Leerzeichen erlauben (für harte Zeilenumbrüche mit zwei Spaces)
+  // Dies korrespondiert mit 'trim_trailing_whitespace = false' in der .editorconfig
+  "MD009": false,
+
+  // MD040: Codeblöcke: Sprache verpflichtend (bash, json, etc.)
+  "MD040": true
+}
+
+
+### END OF FILE: .markdownlint.jsonc
+
+#################################################################
+### BEGIN FILE: lib\libcolors.sh
+#################################################################
+
+# FILE: lib/libcolors.sh
+#!/usr/bin/env bash
+#
+# Definition atomarer ANSI-Farbcodes und Text-Attribute.
+# Diese Bibliothek dient als reine Datenbasis für libconstants.sh und
+# Shell-Prompts. Sie enthält keine Logik und ist source-bare.
+
+# @section Text-Attribute
+# Steuerung der Textdarstellung (Fett, Kursiv, etc.)
+ATTR_RESET='0'
+ATTR_BOLD='1'
+ATTR_DIM='2'
+ATTR_ITALIC='3'
+ATTR_UNDERLINE='4'
+ATTR_BLINK='5'
+ATTR_REVERSE='7'
+ATTR_INVISIBLE='8'
+
+# @section Vordergrund-Farben
+# Standard ANSI-Farben für Text
+CLR_BLACK='0;30'
+CLR_RED='0;31'
+CLR_GREEN='0;32'
+CLR_YELLOW='0;33'
+CLR_BLUE='0;34'
+CLR_MAGENTA='0;35'
+CLR_CYAN='0;36'
+CLR_WHITE='0;37'
+
+# @section Hintergrund-Farben
+# Hilfreich für Statuszeilen, Header oder kontrastreiche Warnungen
+BG_BLACK='40'
+BG_RED='41'
+BG_GREEN='42'
+BG_YELLOW='43'
+BG_BLUE='44'
+BG_MAGENTA='45'
+BG_CYAN='46'
+BG_WHITE='47'
+
+# @section Steuerzeichen
+# Definition der ESC-Sequenz-Begrenzer für den Zusammenbau in libconstants.sh
+ESC_START='\e['
+ESC_END='m'
+
+true
+
+
+### END OF FILE: lib\libcolors.sh
+
+#################################################################
+### BEGIN FILE: lib\libconstants.sh
+#################################################################
+
+# FILE: lib/libconstants.sh
+#!/usr/bin/env bash
+#
+# Zentrale Konfiguration und Datenmodell des Repositorys.
+# Definiert Exit-Codes, UI-Elemente, Pfade und Whitelists für die Installation.
+# Abhängigkeiten: libcolors.sh (muss im selben Verzeichnis liegen).
+
+# --- Basis-Farben laden ---
+# Importiert CLR_*, ATTR_*, ESC_START/END für die Assemblierung der UI-Farben.
+source "${REPO_ROOT}/lib/libcolors.sh"
+
+# @section Exit Codes
+# Standardisierte Rückgabewerte für alle Funktionen und Skripte.
+readonly EXIT_OK=0
+readonly EXIT_FATAL=1
+readonly EXIT_WARN=2
+
+# @section UI / Symbole (ASCII-safe)
+# Rein textbasierte Status-Indikatoren für maximale Kompatibilität (TTY/SSH).
+readonly SYMBOL_OK="[ OK ]"
+readonly SYMBOL_ERROR="[  X  ]"
+readonly SYMBOL_WARN="[  i  ]"
+
+# @section CLI-Farben
+# Zusammenbau der ANSI-Escapesequenzen aus den atomaren Bausteinen der libcolors.sh.
+readonly COL_RED="${ESC_START}${CLR_RED}${ESC_END}"
+readonly COL_GREEN="${ESC_START}${CLR_GREEN}${ESC_END}"
+readonly COL_YELLOW="${ESC_START}${CLR_YELLOW}${ESC_END}"
+readonly COL_BLUE="${ESC_START}${CLR_BLUE}${ESC_END}"
+readonly COL_MAGENTA="${ESC_START}${CLR_MAGENTA}${ESC_END}"
+readonly COL_CYAN="${ESC_START}${CLR_CYAN}${ESC_END}"
+readonly COL_RESET="${ESC_START}${CLR_RESET}${ESC_END}"
+
+# @section Log-Formatierung
+# Kombinierte Präfixe für die Verwendung in libcommon.sh (Logging-Funktionen).
+readonly LOG_PREFIX_INFO="${COL_GREEN}${SYMBOL_OK}${COL_RESET}"
+readonly LOG_PREFIX_WARN="${COL_YELLOW}${SYMBOL_WARN}${COL_RESET}"
+readonly LOG_PREFIX_ERROR="${COL_RED}${SYMBOL_ERROR}${COL_RESET}"
+
+# @section Erweiterte Stile
+# Komplexe UI-Elemente unter Verwendung von Text-Attributen (Fett/Unterstrichen).
+readonly STYLE_BOLD_YELLOW="${ESC_START}${ATTR_BOLD};33${ESC_END}"
+readonly STYLE_UNDERLINE_GREEN="${ESC_START}${ATTR_UNDERLINE};32${ESC_END}"
+readonly STYLE_HEADER_BG="${ESC_START}${ATTR_BOLD};${BG_BLUE};33${ESC_END}"
+
+# @section Pfade & Repo-Struktur
+# Definition der Verzeichnisnamen innerhalb des Repository-Roots.
+readonly REPO_HOME_DIR="home"
+readonly REPO_CONFIG_DIR="config"
+
+# @section Home-Dotfiles (Symlink Whitelist)
+# Liste aller Dateien in 'home/', die aktiv in das User-Verzeichnis verlinkt werden.
+readonly DOTFILES_WHITELIST=(
+    ".bashrc"
+    ".bashexports"
+    ".bashenv"
+    ".bashprompt"
+    ".bashaliases"
+    ".bashfunctions"
+    ".bashwartung"
+    ".dircolors"
+    ".nanorc"
+)
+
+# @section Shell-Verhalten
+# Standardwerte für Umgebungsvariablen und Bash-Parameter.
+readonly SHELL_TMOUT_SSH=0        # 0 = Deaktiviert (für SSH-Connections)
+readonly HIST_SIZE_INTERNAL=8192
+readonly HIST_FILE_SIZE_INTERNAL=16384
+
+# @section Runtime-Configs (Copy Whitelist)
+# Verzeichnisse in 'config/', die als Kopie nach ~/.config/ installiert werden.
+readonly RUNTIME_CONFIGS=(
+    "mc"
+    "micro"
+)
+
+true
+
+
+### END OF FILE: lib\libconstants.sh
+
+#################################################################
+### BEGIN FILE: lib\libchecks.sh
+#################################################################
+
+# FILE: lib/libchecks.sh
+#!/usr/bin/env bash
+#
+# Modul für System-Diagnosen und Integritätsprüfungen.
+# Abhängigkeiten: libcolors.sh, libconstants.sh, libcommon.sh
+
+# @description Ermittelt den absoluten Zielpfad einer Datei oder eines Symlinks.
+# @param $1 Pfad, der aufgelöst werden soll.
+# @stdout Der kanonische (absolute) Pfad.
+canon_path() {
+    local p="$1"
+
+    # 1. Falls Pfad ein Link ist, Ziel auslesen
+    if [[ -L "$p" ]]; then
+        p=$(readlink -f "$p" 2>/dev/null || realpath "$p" 2>/dev/null || echo "$p")
+    fi
+
+    # 2. Absoluten Pfad sicherstellen (Portabilität für Linux/BSD/Windows)
+    if has_cmd readlink && readlink -f / >/dev/null 2>&1; then
+        readlink -f "$p" 2>/dev/null
+    elif has_cmd realpath; then
+        realpath "$p" 2>/dev/null
+    else
+        printf '%s\n' "$p"
+    fi
+}
+
+# @description Prüft das System auf notwendige Abhängigkeiten und Verzeichnisse.
+# @param $1 Home-Verzeichnis des Ziel-Users.
+# @param $2 Benutzername.
+# @param $3 Root-Pfad des Repositories.
+# @return EXIT_OK oder EXIT_FATAL.
+checks_health() {
+    local home_dir="$1" user_name="$2" repo_root="$3"
+    local fatal_errors=0
+
+    log_info "Health Check für $user_name ($home_dir):"
+
+    # Benötigte CLI-Tools verifizieren
+    local cmd
+    for cmd in git ln rm mkdir cp; do
+        if has_cmd "$cmd"; then
+            echo -e "    ${COL_GREEN}${SYMBOL_OK}${COL_RESET} Befehl '$cmd' gefunden."
+        else
+            log_error "Befehl '$cmd' fehlt auf dem System."
+            ((fatal_errors++))
+        fi
+    done
+
+    # Existenz der kritischen Pfade prüfen
+    if [[ ! -d "$repo_root" ]]; then
+        log_error "Repo-Verzeichnis nicht gefunden: $repo_root"
+        ((fatal_errors++))
+    fi
+
+    if [[ ! -d "$home_dir" ]]; then
+        log_error "Home-Verzeichnis nicht gefunden: $home_dir"
+        ((fatal_errors++))
+    fi
+
+    [[ $fatal_errors -gt 0 ]] && return "$EXIT_FATAL"
+    return "$EXIT_OK"
+}
+
+# @description Validiert den Status aller Symlinks gemäß der DOTFILES_WHITELIST.
+# @param $1 Home-Verzeichnis des Ziel-Users.
+# @param $2 Benutzername.
+# @param $3 Root-Pfad des Repositories.
+# @return EXIT_OK oder EXIT_WARN.
+checks_check_symlinks() {
+    local home_dir="$1" user_name="$2" repo_root="$3"
+    local warnings=0
+
+    log_info "Symlink Check für $user_name:"
+
+    local file src dest
+    for file in "${DOTFILES_WHITELIST[@]}"; do
+        src="${repo_root}/home/${file}"
+        dest="${home_dir}/${file}"
+
+        # 1. Existenz im Repo prüfen
+        if [[ ! -e "$src" ]]; then
+            echo -e "    ${COL_YELLOW}${SYMBOL_WARN}${COL_RESET} Quelle fehlt im Repo: ${file}"
+            ((warnings++))
+            continue
+        fi
+
+        # 2. Verknüpfungs-Status im Home prüfen
+        if [[ -L "$dest" ]]; then
+            # Pfadvergleich der kanonischen Ziele
+            local canon_dest_target="$(canon_path "$dest")"
+            local canon_src="$(canon_path "$src")"
+
+            if [[ "$canon_dest_target" == "$canon_src" ]]; then
+                echo -e "    ${COL_GREEN}${SYMBOL_OK}${COL_RESET} ${file}: Korrekt verlinkt."
+            else
+                echo -e "    ${COL_YELLOW}${SYMBOL_WARN}${COL_RESET} ${file}: Zeigt auf falsches Ziel."
+                ((warnings++))
+            fi
+        elif [[ -e "$dest" ]]; then
+            echo -e "    ${COL_YELLOW}${SYMBOL_WARN}${COL_RESET} ${file}: Reale Datei blockiert Link."
+            ((warnings++))
+        else
+            echo -e "    ${COL_RED}${SYMBOL_ERROR}${COL_RESET} ${file}: Link fehlt."
+            ((warnings++))
+        fi
+    done
+
+    [[ $warnings -gt 0 ]] && return "$EXIT_WARN"
+    return "$EXIT_OK"
+}
+
+true
+
+
+### END OF FILE: lib\libchecks.sh
+
+#################################################################
+### BEGIN FILE: lib\libcommon.sh
+#################################################################
+
+# FILE: lib/libcommon.sh
+#!/usr/bin/env bash
+#
+# Zentrale Hilfsfunktionen für Logging, Systemprüfung und Befehlsausführung.
+# Erbt UI-Elemente und Exit-Codes aus libconstants.sh.
+
+# --- Integritäts-Check ---
+# Validierung der Sourcing-Hierarchie: Verhindert Laufzeitfehler durch fehlende Konstanten.
+if [[ -z "$LOG_PREFIX_INFO" ]]; then
+    echo "CRITICAL: libcommon.sh geladen ohne libconstants.sh!" >&2
+    exit 1
+fi
+
+# @section Logging Funktionen
+# Einheitliche Ausgabeformate für den Benutzer.
+
+# @description Gibt eine Informationsmeldung mit dem INFO-Präfix aus.
+log_info()  {
+    echo -e "${LOG_PREFIX_INFO} $*"
+}
+
+# @description Gibt eine Warnung mit dem WARN-Präfix aus.
+log_warn()  {
+    echo -e "${LOG_PREFIX_WARN} $*"
+}
+
+# @description Gibt eine Fehlermeldung auf stderr aus.
+log_error() {
+    echo -e "${LOG_PREFIX_ERROR} $*" >&2
+}
+
+# @description Gibt eine Fehlermeldung aus und beendet das Skript sofort.
+# @param $* Die Fehlermeldung.
+die() {
+    log_error "$*"
+    exit "${EXIT_FATAL:-1}"
+}
+
+# @section System & Befehls-Helfer
+# Validierung von Abhängigkeiten zur Laufzeit.
+
+# @description Prüft, ob ein Befehl im System-Pfad verfügbar ist.
+# @param $1 Der Name des zu prüfenden Befehls.
+# @return 0 (Erfolg) oder 1 (Fehlgeschlagen).
+has_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# @description Erzwingt die Existenz eines Befehls; bricht bei Fehlen via 'die' ab.
+# @param $1 Der Name des erforderlichen Befehls.
+require_cmd() {
+    if ! has_cmd "$1"; then
+        die "Erforderliches Tool fehlt: $1"
+    fi
+}
+
+# @section Ausführungs-Wrapper
+# Steuerung von mutierenden Aktionen (Dry-Run Support).
+
+# @description Führt einen Befehl aus oder simuliert ihn lediglich im Dry-Run Modus.
+# @param $* Der auszuführende Befehl inklusive Argumente.
+# @return Originaler Exit-Code des Befehls oder 0 im Dry-Run.
+run() {
+    # 1. Simulation prüfen (Variable wird in dotfilesctl.sh gesetzt)
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        echo -e "${COL_YELLOW}DRY_RUN:${COL_RESET} $*"
+        return 0
+    fi
+
+    # 2. Reale Ausführung
+    "$@"
+    return $?
+}
+
+true
+
+
+### END OF FILE: lib\libcommon.sh
+
+#################################################################
+### BEGIN FILE: lib\libengine.sh
+#################################################################
+
+# FILE: lib/libengine.sh
+#!/usr/bin/env bash
+#
+# Kern-Logik für die Installation und Deinstallation von Konfigurationsdateien.
+# Diese Bibliothek verarbeitet Symlinks für Home-Files und Kopier-Operationen
+# für Runtime-Konfigurationen. Erbt Konstanten und Hilfsfunktionen.
+
+# @description Installiert Dotfiles als Symlinks im Home-Verzeichnis des Users.
+# @param $1 Home-Verzeichnis des Ziel-Users.
+# @param $2 Benutzername (für Logging).
+# @param $3 Root-Pfad des Repositories.
+# @return EXIT_OK oder EXIT_FATAL.
+engine_install_home() {
+    local home_dir="$1" user_name="$2" repo_root="$3"
+    local errors=0
+
+    log_info "Starte Home-Installation für ${user_name} in ${home_dir}"
+
+    local file src dest
+    for file in "${DOTFILES_WHITELIST[@]}"; do
+        src="${repo_root}/${REPO_HOME_DIR}/${file}"
+        dest="${home_dir}/${file}"
+
+        # 1. Quell-Validierung
+        if [[ ! -e "$src" ]]; then
+            log_warn "SKIP ${file}: Quelle fehlt im Repo"
+            continue
+        fi
+
+        # 2. Idempotenz-Prüfung: Ist der Link bereits korrekt?
+        if [[ -L "$dest" ]]; then
+            if [[ "$(canon_path "$dest")" == "$(canon_path "$src")" ]]; then
+                log_info "OK ${file}: Symlink bereits korrekt"
+                continue
+            else
+                log_warn "SKIP ${file}: Symlink zeigt auf fremdes Ziel"
+                continue
+            fi
+        fi
+
+        # 3. Sicherheits-Check: Keine echten Dateien/Verzeichnisse überschreiben
+        if [[ -e "$dest" ]]; then
+            log_warn "SKIP ${file}: Ziel existiert bereits als echte Datei/Dir"
+            continue
+        fi
+
+        # 4. Verknüpfung erstellen (via run-Wrapper für Dry-Run Support)
+        run ln -sf "$src" "$dest" || ((errors++))
+    done
+
+    # Anschluss: Installation der Runtime-Configs (z.B. mc, micro)
+    engine_install_runtime_configs "$home_dir" "$repo_root" || ((errors++))
+
+    [[ $errors -gt 0 ]] && return "$EXIT_FATAL"
+    return "$EXIT_OK"
+}
+
+# @description Entfernt Symlinks, die auf das Repository zeigen.
+# @param $1 Home-Verzeichnis des Ziel-Users.
+# @param $2 Benutzername.
+# @param $3 Root-Pfad des Repositories.
+# @return EXIT_OK oder EXIT_FATAL.
+engine_uninstall_home() {
+    local home_dir="$1" user_name="$2" repo_root="$3"
+    local errors=0
+
+    log_info "Starte Deinstallation für ${user_name}"
+
+    local file src dest
+    for file in "${DOTFILES_WHITELIST[@]}"; do
+        src="${repo_root}/${REPO_HOME_DIR}/${file}"
+        dest="${home_dir}/${file}"
+
+        # Nur Symlinks entfernen, die nachweislich auf dieses Repo zeigen
+        if [[ -L "$dest" ]]; then
+            if [[ "$(canon_path "$dest")" == "$(canon_path "$src")" ]]; then
+                run rm -- "$dest" || ((errors++))
+            else
+                log_warn "SKIP ${file}: Symlink zeigt auf fremdes Ziel"
+            fi
+        elif [[ -e "$dest" ]]; then
+            log_warn "SKIP ${file}: Echte Datei/Dir wird nicht automatisch entfernt"
+        fi
+    done
+
+    # Runtime-Konfigurationen im .config Verzeichnis entfernen
+    local tool target
+    for tool in "${RUNTIME_CONFIGS[@]}"; do
+        target="${home_dir}/.config/${tool}"
+        if [[ -e "$target" || -L "$target" ]]; then
+            run rm -rf -- "$target" || ((errors++))
+        fi
+    done
+
+    [[ $errors -gt 0 ]] && return "$EXIT_FATAL"
+    return "$EXIT_OK"
+}
+
+# @description Kopiert Verzeichnisse aus config/ nach ~/.config/ inklusive Backup-Logik.
+# @param $1 Home-Verzeichnis des Ziel-Users.
+# @param $2 Root-Pfad des Repositories.
+# @return EXIT_OK oder EXIT_FATAL.
+engine_install_runtime_configs() {
+    local home_dir="$1" repo_root="$2"
+    local config_dest="${home_dir}/.config"
+    local error_count=0
+
+    # Sicherstellen, dass der .config Zielordner existiert
+    if [[ ! -d "$config_dest" ]]; then
+        run mkdir -p "$config_dest" || return "$EXIT_FATAL"
+    fi
+
+    for tool in "${RUNTIME_CONFIGS[@]}"; do
+        local src="${repo_root}/${REPO_CONFIG_DIR}/${tool}"
+        local dest="${config_dest}/${tool}"
+
+        if [[ -d "$src" ]]; then
+            # Backup-Logik: Falls Zielordner existiert, verschieben statt löschen
+            if [[ -e "$dest" && ! -L "$dest" ]]; then
+                log_warn "Backup: Verschiebe existierenden Ordner ${tool} nach .bak"
+                [[ -e "${dest}.bak" ]] && run rm -rf "${dest}.bak"
+                run mv "$dest" "${dest}.bak" || ((error_count++))
+            elif [[ -L "$dest" ]]; then
+                # Existierende Links im .config-Ordner werden entfernt
+                run rm "$dest" || ((error_count++))
+            fi
+
+            # Kopier-Vorgang
+            run cp -r "$src" "$config_dest/" || ((error_count++))
+        else
+            log_warn "SKIP '${tool}': Quelle fehlt in ${REPO_CONFIG_DIR}/"
+        fi
+    done
+
+    [[ $error_count -gt 0 ]] && return "$EXIT_FATAL"
+    return "$EXIT_OK"
+}
+
+true
+
+
+### END OF FILE: lib\libengine.sh
+
+#################################################################
+### BEGIN FILE: lib\libplatform_linux.sh
+#################################################################
+
+# FILE: lib/libplatform_linux.sh
+#!/usr/bin/env bash
+#
+# Linux-spezifische Implementierungen (Benutzerverwaltung, Root-Validierung).
+# Diese Bibliothek wird nur auf Linux-Systemen geladen.
+# Abhängigkeiten: libcommon.sh, libconstants.sh
+
+# @description Initialisiert Linux-spezifische Anforderungen.
+# @exit EXIT_FATAL, wenn erforderliche System-Tools fehlen.
+platform_linux_init() {
+    # Validierung der für die Benutzerauflösung kritischen Tools
+    require_cmd getent
+    require_cmd id
+}
+
+# @description Erzwingt Root-Rechte für administrative Aufgaben.
+# @exit EXIT_FATAL (via die), wenn der aktuelle User nicht Root (EUID 0) ist.
+platform_linux_require_root() {
+    if [[ "$EUID" -ne 0 ]]; then
+        die "Dieses Kommando erfordert Root-Rechte (sudo)."
+    fi
+}
+
+# @description Identifiziert relevante Benutzer für die Installation.
+# Filterkriterien:
+# 1. UID 0 (Root) für administrative Umgebungen.
+# 2. UIDs >= 1000 (Reguläre Benutzer laut Linux-Standard).
+# 3. Ausschluss von 'nobody' (UID 65534).
+# @stdout Liste der Benutzernamen (einer pro Zeile).
+platform_linux_list_target_users() {
+    # Nutzt getent für Kompatibilität mit LDAP/AD-Benutzern
+    getent passwd | awk -F: '($3 == 0 || ($3 >= 1000 && $3 != 65534)) {print $1}'
+}
+
+# @description Prüft, ob ein spezifischer Benutzer im System existiert.
+# @param $1 Der zu prüfende Benutzername.
+# @return EXIT_OK (0) bei Erfolg, EXIT_FATAL (1) wenn nicht gefunden.
+platform_linux_validate_user() {
+    local user="$1"
+
+    # getent prüft lokal (/etc/passwd) und über konfigurierte Name-Services
+    if getent passwd "$user" >/dev/null 2>&1; then
+        return "$EXIT_OK"
+    else
+        return "$EXIT_FATAL"
+    fi
+}
+
+true
+
+
+### END OF FILE: lib\libplatform_linux.sh
+
+#################################################################
+### BEGIN FILE: lib\libplatform_windows.sh
+#################################################################
+
+# FILE: lib/libplatform_windows.sh
+#!/usr/bin/env bash
+#
+# Windows-spezifische Implementierungen für Git Bash / MSYS2.
+# Fokus: Native Symlink-Unterstützung und Berechtigungs-Validierung.
+# Abhängigkeiten: libcommon.sh, libconstants.sh
+
+# @description Initialisiert die Windows-Umgebung für native Symlinks.
+# @exit EXIT_FATAL, wenn die MSYS-Umgebungsvariable nicht gesetzt werden kann.
+platform_windows_init() {
+    # Erzwingt native Windows-Symlinks anstelle von MSYS-Emulationen (Kopien).
+    # 'nativestrict' sorgt dafür, dass Operationen abbrechen, wenn kein echter Link möglich ist.
+    export MSYS="winsymlinks:nativestrict"
+
+    if [[ "${MSYS:-}" != *"winsymlinks:nativestrict"* ]]; then
+        die "Konnte MSYS=winsymlinks:nativestrict nicht setzen."
+    fi
+}
+
+# @description Verifiziert proaktiv, ob der User Symlinks erstellen darf.
+# Erstellt einen Test-Link in einem temporären Verzeichnis.
+# @exit EXIT_FATAL mit detaillierter Anleitung bei fehlenden Rechten (Entwicklermodus).
+platform_windows_require_symlink_rights() {
+    log_info "Prüfe Windows Symlink-Berechtigungen..."
+
+    local tmp_dir test_target test_link
+    tmp_dir="$(mktemp -d 2>/dev/null || echo "")"
+    [[ -z "$tmp_dir" || ! -d "$tmp_dir" ]] && die "Konnte temporäres Verzeichnis für Test nicht erstellen."
+
+    test_target="${tmp_dir}/target_file"
+    test_link="${tmp_dir}/test_link"
+
+    # 'nativestrict' erfordert zwingend die Existenz der Quelldatei vor der Verlinkung.
+    printf '%s\n' "symlink-test" >"$test_target" || die "Konnte Test-Datei nicht erstellen."
+
+    # 1. Test: Versuche einen symbolischen Link zu erstellen
+    if ln -s "$test_target" "$test_link" 2>/dev/null; then
+        # Erfolg: Aufräumen und fortfahren
+        rm -f "$test_link" "$test_target" 2>/dev/null || true
+        rmdir "$tmp_dir" 2>/dev/null || true
+
+        echo -e "    ${COL_GREEN}${SYMBOL_OK}${COL_RESET} Symlink-Rechte erfolgreich verifiziert."
+        return "$EXIT_OK"
+    fi
+
+    # 2. Fehlerfall: Aufräumen und Benutzer informieren
+    rm -f "$test_link" "$test_target" 2>/dev/null || true
+    rmdir "$tmp_dir" 2>/dev/null || true
+
+    echo -e "${COL_RED}${SYMBOL_ERROR} FEHLER: Native Symlinks konnten nicht erstellt werden.${COL_RESET}" >&2
+    cat <<EOF >&2
+
+Mögliche Ursachen:
+1) Der 'Entwicklermodus' (Developer Mode) ist in den Windows-Einstellungen NICHT aktiviert.
+2) Die Sicherheitsrichtlinie 'Erstellen symbolischer Verknüpfungen' fehlt für Ihren Account.
+3) Git Bash wurde nicht mit ausreichenden Rechten gestartet.
+
+Maßnahme: Aktivieren Sie den Entwicklermodus in den Windows 10/11 Einstellungen, um
+Symlinks ohne Administratorrechte zu ermöglichen.
+EOF
+    exit "$EXIT_FATAL"
+}
+
+# @description Gibt den aktuellen Windows-Benutzer zurück.
+# Da Multi-User-Installationen unter Windows/Git-Bash selten/komplex sind,
+# beschränkt sich die Verwaltung hier auf den aktuellen Kontext.
+# @stdout Der aktuelle Benutzername (via whoami).
+platform_windows_list_target_users() {
+    # getent/passwd sind unter MSYS2 oft unzuverlässig; whoami ist der sicherste Weg.
+    whoami
+}
+
+true
+
+
+### END OF FILE: lib\libplatform_windows.sh
+
+#################################################################
+### BEGIN FILE: dotfilesctl.sh
+#################################################################
+
+#!/usr/bin/env bash
+#
+# FILE: dotfilesctl.sh
+# ──────────────────────────────────────────────────────────────
+# ZENTRALER ORCHESTRATOR FÜR DAS DOTFILES-MANAGEMENT
+# ──────────────────────────────────────────────────────────────
+# Zweck:    Zentraler Einstiegspunkt zur Verwaltung von Symlinks
+#           und System-Diagnosen auf Linux & Windows.
+# Standards: set -euo pipefail, Bash >= 4.0, Modulares Design.
+# ──────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+# ──────────────────────────────────────────────────────────────
+# 1. INITIALISIERUNG & PFAD-AUFLÖSUNG
+# ──────────────────────────────────────────────────────────────
+
+# @description Prüft die Bash-Version und löst den REPO_ROOT Pfad auf.
+if (( BASH_VERSINFO[0] < 4 )); then
+    echo "[ X ] Fehler: Bash >= 4.0 erforderlich (gefunden: ${BASH_VERSION})." >&2
+    exit 1
+fi
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+    DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+readonly REPO_ROOT="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+
+# ──────────────────────────────────────────────────────────────
+# 2. MODULARES LADEN DER BIBLIOTHEKEN
+# ──────────────────────────────────────────────────────────────
+
+LIB_FILES=(
+    "libcolors.sh"
+    "libconstants.sh"
+    "libcommon.sh"
+    "libplatform_linux.sh"
+    "libplatform_windows.sh"
+    "libengine.sh"
+    "libchecks.sh"
+)
+
+for lib in "${LIB_FILES[@]}"; do
+    if [[ -f "${REPO_ROOT}/lib/$lib" ]]; then
+        # shellcheck disable=SC1090
+        source "${REPO_ROOT}/lib/$lib"
+    else
+        echo "KRITISCH: Bibliothek ${REPO_ROOT}/lib/$lib nicht gefunden!" >&2
+        exit 1
+    fi
+done
+
+# ──────────────────────────────────────────────────────────────
+# 3. FUNKTIONEN
+# ──────────────────────────────────────────────────────────────
+
+# @description Zeigt die Hilfe und verfügbare Befehle an.
+# @stdout Nutzungsanleitung in Farbe.
+usage() {
+    echo -e "${STYLE_BOLD_YELLOW}Dotfiles Controller${COL_RESET} (v1.2.0)"
+    echo -e "Repo: ${COL_CYAN}${REPO_ROOT}${COL_RESET}\n"
+    cat <<EOF
+Nutzung: $(basename "$0") BEFEHL [OPTIONEN]
+
+Befehle:
+    install         Erstellt Symlinks gemäß DOTFILES_WHITELIST.
+    uninstall       Entfernt Symlinks aus den Zielverzeichnissen.
+    update          Repo-Aktualisierung via 'git pull --ff-only'.
+    health          System-Check (Abhängigkeiten & Schreibrechte).
+    checksymlinks   Integritätsprüfung der vorhandenen Links.
+    doctor          Vollständige Diagnose (Health + Symlinks).
+
+Optionen:
+    --dry-run       Simulation: Keine Schreiboperationen ausführen.
+    --strict        Behandelt Warnungen als fatale Fehler (Exit 1).
+    --all-users     (Linux) Wendet Aktion auf alle Home-Verzeichnisse an.
+    --user <name>   (Linux) Spezifischen System-Benutzer ansteuern.
+    --help          Diese Hilfe anzeigen.
+EOF
+}
+
+# @description Steuert Installation und Deinstallation für Linux und Windows.
+# @param $1 Aktion ("install" oder "uninstall").
+# @param $2 Betriebssystem ("linux" oder "windows").
+# @param $3 Flag für alle Benutzer (0 oder 1).
+# @param $4 Spezifischer Benutzername (optional).
+# @return EXIT_OK oder EXIT_FATAL.
+cmd_install_uninstall() {
+    local action="$1" os="$2" all="$3" user="$4"
+    local error_count=0
+
+    if [[ "$os" == "linux" ]]; then
+        platform_linux_require_root
+
+        local users_to_process=()
+        if [[ "$all" -eq 1 ]]; then
+            mapfile -t users_to_process < <(platform_linux_list_target_users)
+        elif [[ -n "$user" ]]; then
+            platform_linux_validate_user "$user" && users_to_process+=("$user") || die "User '$user' ungültig."
+        else
+            die "Auf Linux ist --all-users oder --user <name> erforderlich."
+        fi
+
+        for u in "${users_to_process[@]}"; do
+            local home
+            home="$(getent passwd "$u" | cut -d: -f6)"
+            log_info "Verarbeite Benutzer: ${COL_CYAN}$u${COL_RESET} ($home)"
+
+            if [[ "$action" == "install" ]]; then
+                engine_install_home "$home" "$u" "$REPO_ROOT" || ((error_count++))
+            else
+                engine_uninstall_home "$home" "$u" "$REPO_ROOT" || ((error_count++))
+            fi
+        done
+    else
+        [[ "$all" -eq 1 || -n "$user" ]] && die "User-Wahl unter Windows nicht unterstützt."
+        [[ "$action" == "install" ]] && platform_windows_require_symlink_rights
+
+        log_info "Verarbeite Benutzer: ${COL_CYAN}$USER${COL_RESET} ($HOME)"
+        if [[ "$action" == "install" ]]; then
+            engine_install_home "$HOME" "$USER" "$REPO_ROOT" || ((error_count++))
+        else
+            engine_uninstall_home "$HOME" "$USER" "$REPO_ROOT" || ((error_count++))
+        fi
+    fi
+
+    [[ $error_count -gt 0 ]] && exit "$EXIT_FATAL"
+    return "$EXIT_OK"
+}
+
+# @description Führt Diagnosen für einen oder mehrere Benutzer aus.
+# @param $1 Diagnose-Modus ("health", "checksymlinks" oder "doctor").
+# @param $2 Betriebssystem ("linux" oder "windows").
+# @param $3 Flag für alle Benutzer (0 oder 1).
+# @param $4 Spezifischer Benutzername (optional).
+# @return EXIT_OK, EXIT_WARN oder EXIT_FATAL.
+cmd_health_checks() {
+    local action="$1" os="$2" all="$3" user="$4"
+    local total_warns=0 total_errors=0
+
+    # @description Interner Zähler für Status-Aggregation.
+    update_counters() {
+        case "$1" in
+            "$EXIT_OK")    return 0 ;;
+            "$EXIT_WARN")  ((total_warns++)); return 0 ;;
+            *)             ((total_errors++)); return 0 ;;
+        esac
+    }
+
+    # @description Führt die Checks für ein einzelnes Home-Dir aus.
+    run_check_single() {
+        local u="$1" h="$2" ret=0
+        echo -e "\n${COL_BLUE}>>>${COL_RESET} ${ATTR_BOLD}Diagnose für: $u${COL_RESET}"
+
+        if [[ "$action" == "health" || "$action" == "doctor" ]]; then
+            ret=0; checks_health "$h" "$u" "$REPO_ROOT" || ret=$?
+            update_counters "$ret"
+            [[ "$action" == "doctor" && "$ret" -eq "$EXIT_FATAL" ]] && return 0
+        fi
+
+        if [[ "$action" == "checksymlinks" || "$action" == "doctor" ]]; then
+            ret=0; checks_check_symlinks "$h" "$u" "$REPO_ROOT" || ret=$?
+            update_counters "$ret"
+        fi
+    }
+
+    local target_users=()
+    if [[ "$os" == "linux" ]]; then
+        if [[ "$all" -eq 1 ]]; then
+            mapfile -t target_users < <(platform_linux_list_target_users)
+        elif [[ -n "$user" ]]; then
+            platform_linux_validate_user "$user" && target_users+=("$user") || die "User '$user' ungültig."
+        else
+            target_users+=("$USER")
+        fi
+    else
+        target_users+=("$USER")
+    fi
+
+    for u in "${target_users[@]}"; do
+        local h
+        h=$([[ "$os" == "linux" ]] && getent passwd "$u" | cut -d: -f6 || echo "$HOME")
+        run_check_single "$u" "$h"
+    done
+
+    echo -e "\n${STYLE_HEADER_BG} ZUSAMMENFASSUNG ${COL_RESET}"
+    if [[ $total_errors -gt 0 ]]; then
+        log_error "Fehlgeschlagen mit ${total_errors} Fehlern."
+        exit "$EXIT_FATAL"
+    fi
+
+    if [[ $total_warns -gt 0 ]]; then
+        log_warn "Beendet mit ${total_warns} Warnungen."
+        [[ "${STRICT_MODE:-0}" -eq 1 ]] && exit "$EXIT_FATAL" || exit "$EXIT_WARN"
+    fi
+
+    log_info "Keine Probleme gefunden."
+    exit "$EXIT_OK"
+}
+
+# ──────────────────────────────────────────────────────────────
+# 4. MAIN ENTRY POINT
+# ──────────────────────────────────────────────────────────────
+
+# @description Hauptfunktion zum Parsen der Argumente und Routing der Befehle.
+# @param $@ Alle Kommandozeilenargumente.
+main() {
+    DRY_RUN=0
+    STRICT_MODE=0
+    TARGET_USER=""
+    ALL_USERS=0
+    CMD=""
+
+    [[ $# -eq 0 ]] && { usage; exit "$EXIT_OK"; }
+
+    CMD="$1"
+    shift
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run)   DRY_RUN=1; shift ;;
+            --strict)    STRICT_MODE=1; shift ;;
+            --all-users) ALL_USERS=1; shift ;;
+            --user)      [[ -z "${2:-}" ]] && die "--user erfordert Argument."; TARGET_USER="$2"; shift 2 ;;
+            --help)      usage; exit "$EXIT_OK" ;;
+            *)           die "Unbekannte Option: $1" ;;
+        esac
+    done
+
+    readonly DRY_RUN STRICT_MODE
+
+    local os_type="$(uname -s)"
+    local os="unknown"
+    case "$os_type" in
+        Linux*) os="linux" ;;
+        MINGW*|MSYS*|CYGWIN*) os="windows" ;;
+        *) die "Betriebssystem nicht unterstützt: ${os_type}" ;;
+    esac
+
+    case "$os" in
+        linux)   platform_linux_init ;;
+        windows) platform_windows_init ;;
+    esac
+
+    case "$CMD" in
+        install|uninstall)
+            cmd_install_uninstall "$CMD" "$os" "$ALL_USERS" "$TARGET_USER"
+            ;;
+        health|checksymlinks|doctor)
+            cmd_health_checks "$CMD" "$os" "$ALL_USERS" "$TARGET_USER"
+            ;;
+        update)
+            log_info "Aktualisiere Repository..."
+            [[ "$os" == "linux" ]] && platform_linux_require_root
+            run git -C "$REPO_ROOT" pull --ff-only || exit "$EXIT_FATAL"
+            exit "$EXIT_OK"
+            ;;
+        *)
+            usage; exit "$EXIT_FATAL"
+            ;;
+    esac
+}
+
+main "$@"
+
+
+### END OF FILE: dotfilesctl.sh
+
+#################################################################
+### BEGIN FILE: test_suite.sh
+#################################################################
+
+#!/usr/bin/env bash
+#
+# FILE: test_suite.sh
+# ──────────────────────────────────────────────────────────────
+# AUTOMATISIERTE TEST-SUITE FÜR DAS DOTFILES-PROJEKT
+# ──────────────────────────────────────────────────────────────
+# Zweck:    Validierung der Kern-Logik (Installation, Idempotenz)
+#           in einer isolierten Sandbox-Umgebung (/tmp).
+# Standards: set -euo pipefail, Bash >= 4.0, Modulares Design.
+# ──────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+# ──────────────────────────────────────────────────────────────
+# 1. INITIALISIERUNG & KONSTANTEN
+# ──────────────────────────────────────────────────────────────
+
+# @description Pfade für die isolierte Test-Umgebung.
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly TEST_SANDBOX="/tmp/dotfiles_test_env"
+readonly TEST_HOME="${TEST_SANDBOX}/home_dir"
+readonly TEST_REPO="${TEST_SANDBOX}/repo"
+
+# Laden der Kern-Bibliotheken für konsistente Farbausgaben und Exit-Codes.
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/lib/libcolors.sh"
+source "${SCRIPT_DIR}/lib/libconstants.sh"
+
+# ──────────────────────────────────────────────────────────────
+# 2. HILFSFUNKTIONEN (TEST-FRAMEWORK)
+# ──────────────────────────────────────────────────────────────
+
+# @description Gibt eine formatierte Header-Nachricht aus.
+# @param $1 Nachrichtentext.
+msg() { echo -e "\n${COL_BLUE}>>>${COL_RESET} ${ATTR_BOLD}$1${COL_RESET}"; }
+
+# @description Gibt eine positive Bestätigung aus.
+# @param $1 Nachrichtentext.
+success() { echo -e "    ${COL_GREEN}${SYMBOL_OK}${COL_RESET} $1"; }
+
+# @description Gibt eine Fehlermeldung aus und bricht den Testlauf ab.
+# @param $1 Fehlermeldung.
+error() { echo -e "    ${COL_RED}${SYMBOL_ERROR}${COL_RESET} $1"; exit 1; }
+
+# ──────────────────────────────────────────────────────────────
+# 3. TEST-DEFINITIONEN
+# ──────────────────────────────────────────────────────────────
+
+# @description Bereitet die Sandbox-Umgebung vor.
+# @stdout Status der Verzeichniserstellung.
+setup_test_env() {
+    msg "Initialisiere Test-Umgebung in ${TEST_SANDBOX}"
+    rm -rf "$TEST_SANDBOX"
+    mkdir -p "$TEST_HOME"
+    mkdir -p "$TEST_REPO"
+
+    # Kopiere das gesamte Projekt in die Sandbox für isolierte Ausführung.
+    cp -r "${SCRIPT_DIR}/"* "$TEST_REPO/"
+    success "Test-Umgebung bereitgestellt."
+}
+
+# @description Führt eine Simulation der Installation durch.
+# @stdout Output des dotfilesctl.sh im Dry-Run Modus.
+test_install_dry_run() {
+    msg "Test: Install Dry-Run"
+    (
+        cd "$TEST_REPO"
+        # Simulation der Umgebungsvariablen für Portabilität
+        HOME="$TEST_HOME" USER="$(whoami)" ./dotfilesctl.sh install --dry-run --user "$(whoami)"
+    )
+    success "Dry-Run erfolgreich durchgelaufen."
+}
+
+# @description Führt eine tatsächliche Installation in der Sandbox aus.
+# @stdout Output der Installation.
+test_actual_install() {
+    msg "Test: Echte Installation"
+    (
+        cd "$TEST_REPO"
+        HOME="$TEST_HOME" USER="$(whoami)" ./dotfilesctl.sh install --user "$(whoami)"
+    )
+
+    # Validierung: Prüft ob .bashrc als Symlink im Test-Home existiert.
+    if [[ -L "${TEST_HOME}/.bashrc" ]]; then
+        success "Symlink .bashrc wurde korrekt erstellt."
+    else
+        error ".bashrc Symlink fehlt nach Installation."
+    fi
+}
+
+# @description Prüft, ob mehrfache Ausführung den Systemzustand nicht verändert.
+# @stdout Bestätigung der Idempotenz.
+test_idempotency() {
+    msg "Test: Idempotenz (Mehrfache Ausführung)"
+    local output
+    # Abfangen des Outputs, um auf die "bereits korrekt" Meldung zu prüfen.
+    output=$(cd "$TEST_REPO" && HOME="$TEST_HOME" USER="$(whoami)" ./dotfilesctl.sh install --user "$(whoami)")
+
+    if echo "$output" | grep -q "bereits korrekt"; then
+        success "Idempotenz bestätigt: Link erkannt und nicht unnötig überschrieben."
+    else
+        error "Idempotenz-Check fehlgeschlagen (Erneute Installation trotz Existenz)."
+    fi
+}
+
+# @description Bereinigt die Test-Umgebung.
+test_cleanup() {
+    msg "Räume Test-Umgebung auf"
+    rm -rf "$TEST_SANDBOX"
+    success "Cleanup abgeschlossen."
+}
+
+# ──────────────────────────────────────────────────────────────
+# 4. EXECUTION
+# ──────────────────────────────────────────────────────────────
+
+# @description Hauptprozess zur Ausführung der Test-Suiten.
+main() {
+    # Sicherheitsprüfung: Skript-Lokalisierung verifizieren.
+    if [[ ! -f "${SCRIPT_DIR}/dotfilesctl.sh" ]]; then
+        echo "Fehler: Test-Suite muss im Root des Dotfiles-Repos liegen."
+        exit 1
+    fi
+
+    setup_test_env
+
+    # Ausführung der Test-Cases
+    test_install_dry_run
+    test_actual_install
+    test_idempotency
+
+    echo -e "\n${COL_GREEN}${ATTR_BOLD}ALLE TESTS ERFOLGREICH BESTANDEN!${COL_RESET} ${SYMBOL_OK}"
+
+    test_cleanup
+}
+
+main "$@"
+
+
+### END OF FILE: test_suite.sh
+
+#################################################################
+### BEGIN FILE: .gitattributes
+#################################################################
+
+# FILE: .gitattributes
+#
+# Steuerung der Git-Behandlung von Zeilenenden und Binärdaten.
+# Stellt sicher, dass Shell-Skripte auch beim Auschecken unter Windows
+# ihre Unix-Zeilenenden (LF) behalten.
+
+# ──────────────────────────────────────────────────────────────
+# 1. Standard-Verhalten & Automatische Erkennung
+# ──────────────────────────────────────────────────────────────
+# Git versucht automatisch zu erkennen, ob eine Datei Text ist,
+# und normalisiert diese intern im Repository auf LF.
+* text=auto
+
+# ──────────────────────────────────────────────────────────────
+# 2. Shell-Skripte & Dotfiles (Zwingend LF erzwungen)
+# ──────────────────────────────────────────────────────────────
+# HINWEIS: Shell-Skripte und Bash-Konfigurationen sind unter Linux
+# unbrauchbar, wenn sie Windows-Zeilenenden (CRLF) enthalten.
+# 'eol=lf' erzwingt Unix-Endungen unabhängig von der OS-Einstellung.
+*.sh       text eol=lf
+.bash* text eol=lf
+.dircolors text eol=lf
+.nanorc    text eol=lf
+
+# ──────────────────────────────────────────────────────────────
+# 3. Konfigurationen & Web-Dateien
+# ──────────────────────────────────────────────────────────────
+# Konsistente Formatierung für Konfigurationsdateien über alle Plattformen.
+*.json      text eol=lf
+*.jsonc     text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=lf
+*.conf      text eol=lf
+*.ini       text eol=lf
+.editorconfig  text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+
+# ──────────────────────────────────────────────────────────────
+# 4. Dokumentation
+# ──────────────────────────────────────────────────────────────
+*.md    text eol=lf
+*.txt   text eol=lf
+LICENSE text eol=lf
+README  text eol=lf
+
+# ──────────────────────────────────────────────────────────────
+# 5. Binärdateien
+# ──────────────────────────────────────────────────────────────
+# Kennzeichnet Dateien, die nicht als Text behandelt werden dürfen.
+# Git wird hier keine Zeilenenden-Konvertierung versuchen und
+# keine Delta-Diffs im Terminal anzeigen.
+
+# Bildmaterial
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+
+# Dokumente & Archive
+*.pdf    binary
+*.zip    binary
+*.7z     binary
+*.tar.gz binary
+*.tgz    binary
+*.zst    binary
+
+# ──────────────────────────────────────────────────────────────
+# 6. IDE-spezifische Dateien
+# ──────────────────────────────────────────────────────────────
+# Konfigurationen für VS Code etc.
+*.code-workspace text eol=lf
+*.code-snippets  text eol=lf
+
+
+### END OF FILE: .gitattributes
+
+#################################################################
+### BEGIN FILE: .gitignore
+#################################################################
+
+# FILE: .gitignore
+#
+# Finale Version - Optimiert für die flache Dotfiles-Struktur.
+# Verhindert System-Müll und schützt private lokale Anpassungen.
+
+# ──────────────────────────────────────────────────────────────
+# 1. Lokale & sensible Daten (HÖCHSTE PRIORITÄT)
+# ──────────────────────────────────────────────────────────────
+# Diese Regeln verhindern, dass Rechner-spezifische Konfigurationen
+# oder Passwörter/Keys in das Repository gelangen.
+*.local
+*_local
+local_*
+.env
+config/ssh_keys.conf
+
+# ──────────────────────────────────────────────────────────────
+# 2. Editor & IDE (VS Code / Nano)
+# ──────────────────────────────────────────────────────────────
+# VS Code User-Daten ignorieren, aber Projekt-Settings erlauben
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!*.code-workspace
+!*.code-snippets
+
+# Nano & Backup-Reste
+.history/
+*.bak
+*.swp
+*~
+*.orig
+*.rej
+
+# ──────────────────────────────────────────────────────────────
+# 3. System-Müll (OS-spezifisch)
+# ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+.directory
+
+# ──────────────────────────────────────────────────────────────
+# 4. Logs & temporäre Daten
+# ──────────────────────────────────────────────────────────────
+logs/
+*.log
+*.tmp
+.dotfiles_state
+
+# ──────────────────────────────────────────────────────────────
+# 5. Whitelist (Kern-Dateien explizit erlauben)
+# ──────────────────────────────────────────────────────────────
+# Wir heben die Ignorierung für alle wichtigen Dotfiles explizit auf,
+# um sicherzugehen, dass sie trotz allgemeiner Regeln (wie *.local)
+# korrekt vom Git-Index erfasst werden.
+
+# Shell-Hauptmodule
+!.bashrc
+!.bashenv
+!.bashexports
+!.bashaliases
+!.bashfunctions
+!.bashprompt
+
+# Konfigurationen
+!.dircolors
+!.editorconfig
+!.nanorc
+!.gitattributes
+!.gitignore
+
+# Dokumentation & Libs
+!README.md
+!LICENSE
+!lib/*.sh
+!dotfilesctl.sh
+
+# Beispiel-Dateien (falls vorhanden)
+!config/*.example
+
+
+### END OF FILE: .gitignore
+
+#################################################################
+### BEGIN FILE: config\mc\ini
+#################################################################
+
+[Midnight-Commander]
+verbose=true
+shell_patterns=true
+auto_save_setup=true
+preallocate_space=false
+auto_menu=false
+use_internal_view=true
+use_internal_edit=false
+clear_before_exec=true
+confirm_delete=true
+confirm_overwrite=true
+confirm_execute=false
+confirm_history_cleanup=true
+confirm_exit=false
+confirm_directory_hotlist_delete=false
+confirm_view_dir=false
+safe_delete=false
+safe_overwrite=false
+use_8th_bit_as_meta=false
+mouse_move_pages_viewer=true
+mouse_close_dialog=false
+fast_refresh=false
+drop_menus=false
+wrap_mode=true
+old_esc_mode=true
+cd_symlinks=true
+show_all_if_ambiguous=false
+use_file_to_guess_type=true
+alternate_plus_minus=false
+only_leading_plus_minus=true
+show_output_starts_shell=false
+xtree_mode=false
+file_op_compute_totals=true
+classic_progressbar=true
+use_netrc=true
+ftpfs_always_use_proxy=false
+ftpfs_use_passive_connections=true
+ftpfs_use_passive_connections_over_proxy=false
+ftpfs_use_unix_list_options=true
+ftpfs_first_cd_then_ls=true
+ignore_ftp_chattr_errors=true
+editor_fill_tabs_with_spaces=false
+editor_return_does_auto_indent=false
+editor_backspace_through_tabs=false
+editor_fake_half_tabs=true
+editor_option_save_position=true
+editor_option_auto_para_formatting=false
+editor_option_typewriter_wrap=false
+editor_edit_confirm_save=true
+editor_syntax_highlighting=true
+editor_persistent_selections=true
+editor_drop_selection_on_copy=true
+editor_cursor_beyond_eol=false
+editor_cursor_after_inserted_block=false
+editor_visible_tabs=true
+editor_visible_spaces=true
+editor_line_state=false
+editor_simple_statusbar=false
+editor_check_new_line=false
+editor_show_right_margin=false
+editor_group_undo=true
+editor_state_full_filename=true
+editor_ask_filename_before_edit=false
+nice_rotating_dash=true
+shadows=true
+mcview_remember_file_position=false
+auto_fill_mkdir_name=true
+copymove_persistent_attr=true
+pause_after_run=1
+mouse_repeat_rate=100
+double_click_speed=250
+old_esc_mode_timeout=1000000
+max_dirt_limit=10
+num_history_items_recorded=60
+vfs_timeout=60
+ftpfs_directory_timeout=900
+ftpfs_retry_seconds=30
+fish_directory_timeout=900
+editor_tab_spacing=8
+editor_word_wrap_line_length=72
+editor_option_save_mode=0
+editor_backup_extension=~
+editor_filesize_threshold=64M
+editor_stop_format_chars=-+*\\,.;:&>
+mcview_eof=
+skin=gotar
+
+filepos_max_saved_entries=1024
+
+[Layout]
+output_lines=0
+left_panel_size=89
+top_panel_size=0
+message_visible=true
+keybar_visible=true
+xterm_title=true
+command_prompt=true
+menubar_visible=true
+free_space=true
+horizontal_split=false
+vertical_equal=true
+horizontal_equal=true
+
+[Misc]
+timeformat_recent=%d. %b %H:%M
+timeformat_old=%d. %b %Y 
+ftp_proxy_host=gate
+ftpfs_password=anonymous@
+display_codepage=UTF-8
+source_codepage=Other_8_bit
+autodetect_codeset=
+spell_language=en
+clipboard_store=
+clipboard_paste=
+
+[Colors]
+base_color=
+linux=
+color_terminals=
+
+xterm=
+
+[Panels]
+show_mini_info=true
+kilobyte_si=false
+mix_all_files=false
+show_backups=true
+show_dot_files=true
+fast_reload=false
+fast_reload_msg_shown=false
+mark_moves_down=true
+reverse_files_only=true
+auto_save_setup_panels=false
+navigate_with_arrows=false
+panel_scroll_pages=true
+panel_scroll_center=false
+mouse_move_pages=true
+filetype_mode=true
+permission_mode=false
+torben_fj_mode=false
+quick_search_mode=2
+select_flags=6
+
+[Panelize]
+Geänderte Git-Dateien=git ls-files --modified
+Nach *.orig nach dem Patchen suchen=find . -name \\*.orig -print
+Nach dem Patchen nach Ablehnungen suchen=find . -name \\*.rej -print
+SUID- und SGID-Programme suchen=find . \\( \\( -perm -04000 -a -perm /011 \\) -o \\( -perm -02000 -a -perm /01 \\) \\) -print
+
+
+### END OF FILE: config\mc\ini
+
+#################################################################
+### BEGIN FILE: config\micro\bindings.json
+#################################################################
+
+{
+    "Alt-/": "lua:comment.comment",
+    "Backspace": "Backspace",
+    "Ctrl-/": "lua:comment.comment",
+    "Ctrl-a": "SelectAll",
+    "Ctrl-c": "Copy",
+    "Ctrl-d": "SpawnMultiCursor",
+    "Ctrl-f": "Find",
+    "Ctrl-q": "Quit",
+    "Ctrl-s": "Save",
+    "Ctrl-v": "Paste",
+    "Ctrl-x": "Cut",
+    "Ctrl-y": "Redo",
+    "Ctrl-z": "Undo",
+    "CtrlAlt-Down": "CursorDown",
+    "CtrlAlt-Left": "CursorLeft",
+    "CtrlAlt-Right": "CursorRight",
+    "CtrlAlt-Up": "CursorUp",
+    "CtrlShift-c": "RemoveAllMultiCursors",
+    "CtrlShift-d": "SkipMultiCursor",
+    "CtrlShift-p": "CommandMode",
+    "CtrlUnderscore": "lua:comment.comment",
+    "Delete": "Delete",
+    "F4": "command:jumptag"
+}
+
+
+### END OF FILE: config\micro\bindings.json
+
+#################################################################
+### BEGIN FILE: config\micro\settings.json
+#################################################################
+
+{
+    "clipboard": "internal",
+    "colorscheme": "dracula-tc",
+    "indentstyle": "spaces",
+    "ruler": false,
+    "savecursor": true,
+    "scrollbar": true,
+    "softwrap": true
+}
+
+
+### END OF FILE: config\micro\settings.json
+
+#################################################################
+### BEGIN FILE: home\.bashaliases
+#################################################################
+
+# FILE: home/.bashaliases
+#
+# Plattformübergreifende Aliase für interaktive Shells.
+# Nutzt die Umgebungsvariable $PLATFORM (definiert in .bashenv) zur Unterscheidung.
+# Abhängigkeiten: Bash >= 4.0
+
+# @section Navigation
+# Schnelle Verzeichniswechsel ohne unnötigen Tippaufwand.
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias -- -='cd -'  # Wechselt zum vorherigen Verzeichnis
+
+# @section LS & Verzeichnis-Listing
+# Optimierte Darstellung von Dateien und Ordnern.
+if [[ "$PLATFORM" == "linux" ]]; then
+    # Linux (Debian/Ubuntu) spezifische Flags
+    alias ls='ls --color=auto --group-directories-first'
+    alias ll='ls -lah --color=auto --group-directories-first'
+elif [[ "$PLATFORM" == "windows" ]]; then
+    # Git Bash: --show-control-chars sorgt für korrekte Darstellung von Sonderzeichen/Umlauten
+    alias ls='ls --color=auto --show-control-chars --group-directories-first'
+    alias ll='ls -lah --color=auto --show-control-chars --group-directories-first'
+else
+    # Fallback für unbekannte Systeme
+    alias ls='ls --color=auto'
+    alias ll='ls -la'
+fi
+
+alias l='ls -CF'
+alias la='ls -A'
+
+# @section Sicherheit (Interaktive Bestätigung)
+# Schützt vor versehentlichem Überschreiben oder Löschen von Daten.
+alias cp='cp -i'
+alias mv='mv -i'
+alias rm='rm -i'
+alias ln='ln -i'
+
+# @section Werkzeug-Verbesserungen
+# Standard-Tools mit sinnvolleren Standard-Parametern.
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+alias df='df -h' # Human-readable (MB/GB statt Blöcke)
+alias du='du -h'
+
+# @section Plattformspezifische Befehle
+# Aliase, die nur auf dem jeweiligen Betriebssystem Sinn ergeben.
+if [[ "$PLATFORM" == "linux" ]]; then
+    # System-Wartung und Steuerung (erfordert sudo)
+    alias update='sudo apt update && sudo apt upgrade'
+    alias jc='journalctl -xe'
+    alias sc='systemctl'
+elif [[ "$PLATFORM" == "windows" ]]; then
+    # Schneller Zugriff auf Windows-Ressourcen aus der Git Bash
+    alias explorer='explorer . '
+    alias code='code . '
+    # Schneller Sprung in das Windows-Heimatverzeichnis
+    alias cuser='cd /c/Users/$USER'
+fi
+
+# @section Projekt-Spezifisch
+# Zentraler Zugriffspunkt für das Dotfiles-Management-Skript.
+alias dctl="$HOME/dotfiles/dotfilesctl.sh"
+
+# @section Utilities & Debugging
+# Hilfswerkzeuge für die Shell-Konfiguration.
+alias reload='source ~/.bashrc && echo "Shell-Konfiguration neu geladen."'
+# Zeigt die PATH-Variable übersichtlich Zeile für Zeile an
+alias path='echo -e ${PATH//:/\\n}'
+
+
+### END OF FILE: home\.bashaliases
+
+#################################################################
+### BEGIN FILE: home\.bashenv
+#################################################################
+
+# FILE: home/.bashenv
+#
+# Zentrale Umgebungsvariablen, Pfade und Shell-Optionen.
+# Diese Datei wird von der .bashrc geladen und konfiguriert das fundamentale
+# Verhalten der Shell sowie plattformspezifische Exporte.
+
+# @section 0. Farbauflösung (Basis laden)
+# Lädt die atomaren Farbcodes für konsistente UI-Elemente (z.B. farbige Manpages).
+DOT_REPO="${DOTFILES_REPO_PATH:-$HOME/.dotfiles}"
+COLOR_LIB="${DOT_REPO}/lib/libcolors.sh"
+
+if [[ -f "$COLOR_LIB" ]]; then
+    # Wir sourcen die Library, um ESC_START/END und CLR_* verfügbar zu haben
+    source "$COLOR_LIB"
+fi
+
+# @section 1. Pfad-Initialisierung
+# Erweitert die PATH-Variable um benutzerdefinierte Binärverzeichnisse.
+if [[ -d "$HOME/bin" ]] ; then
+    PATH="$HOME/bin:$PATH"
+fi
+
+# @section 2. Bash History & Shell-Optionen
+# Optimierung des Shell-Verhaltens für effizientes Arbeiten.
+HISTCONTROL="ignoreboth:erasedups" # Keine Duplikate, keine Befehle mit Leerzeichen am Anfang
+HISTIGNORE="la:ll:lah:lat:ls:cd ..:exit:mc:au:fg:bg:jobs:history"
+HISTSIZE=8192
+HISTFILESIZE=16384
+
+shopt -s histappend   # History an hängen statt überschreiben beim Schließen
+shopt -s cmdhist      # Mehrzeilige Befehle in einem History-Eintrag speichern
+shopt -s cdspell      # Autokorrektur bei kleinen Tippfehlern im Verzeichnisnamen
+shopt -s checkwinsize # Fenstergröße nach jedem Befehl prüfen und anpassen
+shopt -s globstar     # Erlaubt rekursive Suche mit ** (z.B. ls **/test.txt)
+
+# @section 3. Manpages in Farbe (Linux-only)
+# Nutzt ANSI-Farben zur Hervorhebung von Headlines und Variablen in Handbüchern.
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    export MANPAGER="less -s -M +Gg"
+
+    # LESS_TERMCAP Definitionen (Steuerung der Farben in less)
+    export LESS_TERMCAP_mb="${ESC_START}${CLR_RED}${ESC_END}"      # mb: Blinkend (hier: Rot)
+    export LESS_TERMCAP_md="${ESC_START}1;33${ESC_END}"             # md: Fett/Headline (hier: Gelb)
+    export LESS_TERMCAP_me="${ESC_START}${CLR_RESET}${ESC_END}"     # me: Ende aller Modi
+    export LESS_TERMCAP_se="${ESC_START}${CLR_RESET}${ESC_END}"     # se: Ende Standout-Modus
+    export LESS_TERMCAP_so="${ESC_START}01;44;33${ESC_END}"         # so: Statuszeile (Gelb auf Blau)
+    export LESS_TERMCAP_ue="${ESC_START}${CLR_RESET}${ESC_END}"     # ue: Ende Unterstreichung
+    export LESS_TERMCAP_us="${ESC_START}1;4;32${ESC_END}"          # us: Unterstrichen (hier: Grün)
+fi
+
+# @section 4. SSH-Erkennung & Locales
+# Anpassung für Remote-Sitzungen und Zeichensätze.
+if [[ -n "$SSH_CONNECTION" ]]; then
+    export TMOUT=0 # Verhindert den automatischen Logout bei Inaktivität
+    if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+        export LC_ALL="de_DE.UTF-8" # Deutsche Locales für Linux-Server
+    else
+        export LC_ALL="en_US.UTF-8" # US-Locales als Fallback (z.B. Windows)
+    fi
+fi
+
+# @section 5. Host-spezifische Pfade (Linux)
+# Individuelle Anpassungen basierend auf dem Hostnamen des Systems.
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    case "$(hostname)" in
+        raspifix) [[ -d "/opt/script" ]] && PATH="$PATH:/opt/script" ;;
+        proxmox*) [[ -d "/opt/scripts" ]] && PATH="$PATH:/opt/scripts" ;;
+        *backup*) export MAIL_ON_ERROR="root@localhost" ;;
+    esac
+fi
+
+# @section 6. Tool-Initialisierungen
+# Laden von Drittanbieter-Tools wie FZF oder Dircolors für das Listing.
+if command -v fzf >/dev/null 2>&1 && [[ -f "$HOME/.fzf.bash" ]]; then
+    source "$HOME/.fzf.bash"
+fi
+
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    if [[ -f "$HOME/.dircolors" ]]; then
+        eval "$(dircolors -b "$HOME/.dircolors")"
+    elif [[ -f /etc/DIR_COLORS ]]; then
+        eval "$(dircolors -b /etc/DIR_COLORS)"
+    fi
+fi
+
+# @section 7. Lokale Overrides
+# Erlaubt systemspezifische Anpassungen ohne das Repository zu verändern.
+[[ -f "$HOME/.bash_env_local" ]] && source "$HOME/.bash_env_local"
+
+true
+
+
+### END OF FILE: home\.bashenv
+
+#################################################################
+### BEGIN FILE: home\.bashexports
+#################################################################
+
+# FILE: home/.bashexports
+#
+# Definition globaler Umgebungsvariablen für Tools, Editoren und Locales.
+# Diese Datei konfiguriert das Verhalten von Drittanbieter-Anwendungen.
+# Abhängigkeiten: .bashenv (für $PLATFORM Variable)
+
+# @section 1. Standard-Editor & Pager
+# Festlegung der Standard-Werkzeuge für Textbearbeitung und Dateiansicht.
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    # Dynamische Editor-Wahl unter Linux (Priorität: modern > klassisch)
+    if command -v micro >/dev/null 2>&1; then
+        export EDITOR="micro"
+    elif command -v nano >/dev/null 2>&1; then
+        export EDITOR="nano"
+    else
+        export EDITOR="vi"
+    fi
+else
+    # Windows-Spezifische Editoren (Git Bash Pfade)
+    if [[ -f "/c/Program Files/Notepad++/notepad++.exe" ]]; then
+        export EDITOR="/c/Program Files/Notepad++/notepad++.exe"
+    else
+        export EDITOR="notepad.exe"
+    fi
+fi
+
+# VISUAL wird für Editoren genutzt, die eine UI/Vollbild benötigen
+export VISUAL="$EDITOR"
+export PAGER="less"
+
+# LESS-Optionen: -R erlaubt die korrekte Interpretation von ANSI-Farbcodes
+export LESS="-R"
+
+# @section 2. Sprache / Zeichensatz (Locale)
+# Sicherstellung einer korrekten Darstellung von Umlauten und Sonderzeichen.
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    # Standard für Linux-Systeme (Deutsch/UTF-8)
+    export LANG="de_DE.UTF-8"
+    export LC_ALL="de_DE.UTF-8"
+else
+    # Standard für Windows/Git Bash (US/UTF-8 für maximale Kompatibilität)
+    export LANG="en_US.UTF-8"
+    export LC_ALL="en_US.UTF-8"
+fi
+
+# @section 3. Lokale Erweiterungen
+# Ermöglicht systemspezifische Exporte (z.B. API-Keys oder private Pfade),
+# ohne diese in das öffentliche Repository einzuchecken.
+[[ -f "$HOME/.bash_exports_local" ]] && source "$HOME/.bash_exports_local"
+
+true
+
+
+### END OF FILE: home\.bashexports
+
+#################################################################
+### BEGIN FILE: home\.bashfunctions
+#################################################################
+
+# FILE: home/.bashfunctions
+#
+# Sammlung nützlicher Shell-Funktionen für den Terminal-Alltag.
+# Optimiert für Cross-Plattform-Kompatibilität (Linux & Windows Git-Bash).
+# Abhängigkeiten: .bashenv (für $PLATFORM)
+
+# @section Suche & Finden
+
+# @description Schnelle Dateisuche im aktuellen Verzeichnis (case-insensitive).
+# @param $1 Suchbegriff (Teil des Dateinamens).
+f() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: f <dateiname>"
+        return 1
+    fi
+    find . -type f -iname "*$1*"
+}
+
+# @description Rekursive Textsuche in Dateien, ignoriert Binärdaten.
+# @param $1 Suchbegriff/Regex.
+grepr() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: grepr <suchbegriff>"
+        return 1
+    fi
+    grep -rnI "$1" .
+}
+
+# @section Archivierung & Packen
+
+# @description Intelligentes Entpacken verschiedenster Archivtypen.
+# @param $1 Der Pfad zum Archiv.
+extract() {
+    if [[ -f "$1" ]]; then
+        case "$1" in
+            *.tar.bz2)   tar xjf "$1"     ;;
+            *.tar.gz)    tar xzf "$1"     ;;
+            *.bz2)       bunzip2 "$1"     ;;
+            *.rar)       unrar x "$1"     ;;
+            *.gz)        gunzip "$1"      ;;
+            *.tar)       tar xf "$1"      ;;
+            *.tbz2)      tar xjf "$1"     ;;
+            *.tgz)       tar xzf "$1"     ;;
+            *.zip)       unzip "$1"       ;;
+            *.Z)         uncompress "$1"  ;;
+            *.7z)        7z x "$1"        ;;
+            *)           echo "'$1' kann nicht entpackt werden." ;;
+        esac
+    else
+        echo "'$1' ist keine gültige Datei."
+    fi
+}
+
+# @section Netzwerk-Helfer
+
+# @description Zeigt die lokale IP und die öffentliche IP (via externem Dienst) an.
+myip() {
+    echo -n "Lokale IP: "
+    if [[ "$PLATFORM" == "linux" ]]; then
+        hostname -I | awk '{print $1}'
+    elif [[ "$PLATFORM" == "windows" ]]; then
+        # Extraktion der IPv4-Adresse aus der Windows-ipconfig Ausgabe
+        ipconfig | grep -i "IPv4" | awk -F: '{ print $2 }' | head -n 1 | xargs
+    fi
+
+    # Öffentliche IP-Abfrage via curl (falls installiert)
+    if command -v curl >/dev/null 2>&1; then
+        echo -n "Öffentliche IP: "
+        curl -s https://ifconfig.me
+        echo ""
+    fi
+}
+
+# @section Plattform-Spezifische Helfer
+
+if [[ "$PLATFORM" == "linux" ]]; then
+    # @description Listet die 10 Prozesse mit dem höchsten Speicherverbrauch (Linux).
+    top_mem() {
+        ps auxf | sort -nr -k 4 | head -n 10
+    }
+
+    # @description Listet die 10 Prozesse mit der höchsten CPU-Last (Linux).
+    top_cpu() {
+        ps auxf | sort -nr -k 3 | head -n 10
+    }
+
+elif [[ "$PLATFORM" == "windows" ]]; then
+    # @description Wandelt Windows-Pfade in Unix-Pfade um (hilfreich für Copy & Paste).
+    # Ohne Parameter wird der Inhalt der Windows-Zwischenablage konvertiert.
+    uath() {
+        if [[ -z "$1" ]]; then
+            # PowerShell wird genutzt, um die Zwischenablage auszulesen
+            cygpath -u "$(powershell.exe -command "Get-Clipboard")"
+        else
+            cygpath -u "$1"
+        fi
+    }
+fi
+
+# @section System-Status
+
+# @description Kurzer Integritätscheck der Systemressourcen.
+health() {
+    echo "--- System Health Check ---"
+    echo -n "Datum:  " && date
+    echo -n "User:   " && whoami
+    echo -n "Uptime: " && uptime -p
+
+    if [[ "$PLATFORM" == "linux" ]]; then
+        echo "Disk Usage:"
+        df -h / | grep /
+    elif [[ "$PLATFORM" == "windows" ]]; then
+        echo "Disk Usage (C:):"
+        df -h /c | grep /c
+    fi
+}
+
+# @section Datei- & Verzeichnis-Manipulation
+
+# @description Erstellt einen Ordner-Pfad und wechselt sofort hinein.
+# @param $1 Name oder Pfad des Verzeichnisses.
+mkd() {
+    mkdir -p "$1" && cd "$1"
+}
+
+true
+
+
+### END OF FILE: home\.bashfunctions
+
+#################################################################
+### BEGIN FILE: home\.bashprompt
+#################################################################
+
+# FILE: home/.bashprompt
+#!/usr/bin/env bash
+#
+# Konfiguration des interaktiven Bash-Prompts (PS1).
+# Nutzt die zentrale libcolors.sh für ein konsistentes Farbschema und
+# bietet eine dynamische Git-Branch-Anzeige sowie Fehlerstatus-Visualisierung.
+
+# @section 0. Farbauflösung
+# Importiert die atomaren Farbcodes und bereitet sie für den Prompt auf.
+DOT_REPO="${DOTFILES_REPO_PATH:-$HOME/.dotfiles}"
+COLOR_LIB="${DOT_REPO}/lib/libcolors.sh"
+
+if [[ -f "$COLOR_LIB" ]]; then
+    # Lade Rohdaten (CLR_*, ESC_START, ESC_END)
+    source "$COLOR_LIB"
+
+    # C-Serie (Console): Für normale echo-Ausgaben (ohne Non-Printing-Wrapper).
+    C_RED="${ESC_START}${CLR_RED}${ESC_END}"
+    C_GREEN="${ESC_START}${CLR_GREEN}${ESC_END}"
+    C_YELLOW="${ESC_START}${CLR_YELLOW}${ESC_END}"
+    C_BLUE="${ESC_START}${CLR_BLUE}${ESC_END}"
+    C_RESET="${ESC_START}${CLR_RESET}${ESC_END}"
+
+    # P-Serie (Prompt): Inklusive Bash-Wrapper \[ \].
+    # HINWEIS: Diese Wrapper sind ESSENZIELL, damit die Bash die Länge des
+    # sichtbaren Prompts korrekt berechnet (verhindert Zeilenumbruch-Fehler).
+    P_RED="\[${ESC_START}${CLR_RED}${ESC_END}\]"
+    P_GREEN="\[${ESC_START}${CLR_GREEN}${ESC_END}\]"
+    P_YELLOW="\[${ESC_START}${CLR_YELLOW}${ESC_END}\]"
+    P_BLUE="\[${ESC_START}${CLR_BLUE}${ESC_END}\]"
+    P_MAGENTA="\[${ESC_START}${CLR_MAGENTA}${ESC_END}\]"
+    P_CYAN="\[${ESC_START}${CLR_CYAN}${ESC_END}\]"
+    P_RESET="\[${ESC_START}${CLR_RESET}${ESC_END}\]"
+else
+    # Fallback-Definitionen bei fehlender Library
+    P_GREEN=""
+    P_BLUE=""
+    P_RESET=""
+    P_CYAN=""
+    P_RED=""
+fi
+
+# @section 1. Hilfsfunktionen
+
+# @description Ermittelt den aktuellen Git-Branch, falls das Verzeichnis versioniert ist.
+# @stdout Formatiertes Git-Label für den Prompt.
+__prompt_git_info() {
+    if command -v git >/dev/null 2>&1; then
+        local branch
+        # Versuche Branch-Namen kurz aufzulösen
+        branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+        if [[ -n "$branch" ]]; then
+            echo -e " ${P_YELLOW}(git:${branch})${P_RESET}"
+        fi
+    fi
+}
+
+# @section 2. Prompt-Assemblierung
+
+# @description Setzt die PS1-Variable dynamisch zusammen.
+# Wird über PROMPT_COMMAND vor jeder Anzeige aufgerufen.
+set_prompt() {
+    local EXIT_CODE=$? # Muss als erstes gesichert werden!
+    local PROMPT_SYMBOL="\$"
+
+    # Fehler-Indikator: Das Prompt-Symbol wird rot, wenn der letzte Befehl fehlschlug.
+    local PS_COLOR_SYMBOL="${P_RESET}"
+    if [[ $EXIT_CODE -ne 0 ]]; then
+        PS_COLOR_SYMBOL="${P_RED}"
+    fi
+
+    # Aufbau: [User]@[Host]:[Pfad] (Git-Branch) [Symbol]
+    # \u: User, \h: Host (kurz), \w: Aktueller Pfad (absolut)
+    PS1="${P_GREEN}\u${P_RESET}@${P_CYAN}\h${P_RESET}:${P_BLUE}\w${P_RESET}$(__prompt_git_info) ${PS_COLOR_SYMBOL}${PROMPT_SYMBOL}${P_RESET} "
+}
+
+# @section 3. Initialisierung
+
+# Sorgt dafür, dass set_prompt vor jedem neuen Prompt-Zeichnen ausgeführt wird.
+PROMPT_COMMAND=set_prompt
+
+# Fenster-Titel für GUI-Terminals (xterm, Putty, etc.) setzen.
+# Schreibt "User@Host: Path" in die Titelleiste des Terminal-Fensters.
+case "$TERM" in
+    xterm*|rxvt*)
+        # \e]0; ... \a ist die Escape-Sequenz für den Fenstertitel
+        PS1="\[\e]0;\u@\h: \w\a\]$PS1"
+        ;;
+esac
+
+true
+
+
+### END OF FILE: home\.bashprompt
+
+#################################################################
+### BEGIN FILE: home\.bashrc
+#################################################################
+
+# FILE: home/.bashrc
+#
+# Haupt-Konfigurationsdatei für interaktive Bash-Shells.
+# Orchestriert das Laden aller Teilmodule und führt die Plattformerkennung durch.
+# Diese Datei sollte schlank bleiben und primär als Loader fungieren.
+
+# @section 0. Interaktivitäts-Check
+# Verhindert die Ausführung bei nicht-interaktiven Aufrufen (z. B. scp oder sftp).
+case "$-" in
+    *i*) ;; # Interaktiv -> Fortfahren
+    *) return ;; # Nicht-interaktiv -> Abbruch
+esac
+
+# @section 1. Windows-Spezifische Vorbereitung
+# Erzwingt die Erstellung echter Symlinks in der Git Bash Umgebung.
+if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
+    export MSYS=winsymlinks:nativestrict
+fi
+
+# @section 2. Zentrale Plattform-Erkennung
+# Definiert die Variable $PLATFORM, die von allen Untermodulen genutzt wird.
+case "$(uname -s)" in
+    Linux)
+        export PLATFORM="linux"
+        ;;
+    MINGW*|MSYS*|CYGWIN*)
+        export PLATFORM="windows"
+        ;;
+    *)
+        export PLATFORM="unknown"
+        ;;
+esac
+
+# @section 3. Modul-Orchestrierung
+# Lädt die Teilkonfigurationen in einer fest definierten Abhängigkeits-Reihenfolge.
+# REIHENFOLGE: Env (Basis) -> Exports -> Prompt -> Aliase -> Funktionen
+for file in \
+    "$HOME/.bashenv" \
+    "$HOME/.bashexports" \
+    "$HOME/.bashprompt" \
+    "$HOME/.bashaliases" \
+    "$HOME/.bashfunctions" \
+    "$HOME/.bashwartung"
+do
+    if [[ -f "$file" ]]; then
+        # shellcheck disable=SC1090
+        if ! source "$file" 2>/dev/null; then
+            echo "WARNUNG: Fehler beim Laden von $(basename "$file")" >&2
+        fi
+    fi
+done
+
+# @section 4. Prompt-Initialisierung
+# Integriert die Logik aus .bashprompt sicher in den PROMPT_COMMAND.
+if command -v prompt_run_logic >/dev/null 2>&1; then
+    if [[ -n "${PROMPT_COMMAND:-}" ]]; then
+        # Verhindert doppelte Einträge im PROMPT_COMMAND
+        case ";$PROMPT_COMMAND;" in
+            *";prompt_run_logic;"*) : ;;
+            *) PROMPT_COMMAND="prompt_run_logic; $PROMPT_COMMAND" ;;
+        esac
+    else
+        PROMPT_COMMAND="prompt_run_logic"
+    fi
+else
+    # Hinweis: Falls set_prompt genutzt wird, muss der Funktionsname hier angepasst werden
+    log_warn "Prompt-Logik nicht gefunden (prüfe ~/.bashprompt)" >&2
+fi
+
+# @section 5. Terminal-Integration
+# Setzt Fenstertitel für XTerm-kompatible Emulatoren unter Linux.
+if [[ "$PLATFORM" == "linux" ]]; then
+    case "$TERM" in
+        xterm*|rxvt*)
+            # Fallback-Titel: User@Host: Pfad
+            PS1="\[\e]0;\u@\h: \w\a\]$PS1"
+            ;;
+    esac
+fi
+
+# @section 6. Bash-Completion
+# Aktiviert die intelligente Befehlsvervollständigung (Tab-Completion).
+if ! shopt -oq posix; then
+    if [[ -z "$BASH_COMPLETION_VERSINFO" ]]; then
+        # Sucht an gängigen System-Pfaden nach der Completion-Logik
+        for bc in /usr/share/bash-completion/bash_completion /etc/bash_completion; do
+            if [[ -f "$bc" ]]; then
+                # shellcheck disable=SC1091
+                source "$bc"
+                break
+            fi
+        done
+    fi
+fi
+
+# @section 7. Git-Completion
+# Spezifische Vervollständigung für Git-Befehle und Branch-Namen.
+for gitcompletion in \
+    /usr/share/git/completion/git-completion.bash \
+    /usr/share/bash-completion/completions/git \
+    /etc/bash_completion.d/git
+do
+    if [[ -f "$gitcompletion" ]]; then
+        # shellcheck disable=SC1090
+        source "$gitcompletion"
+        break
+    fi
+done
+
+
+### END OF FILE: home\.bashrc
+
+#################################################################
+### BEGIN FILE: home\.dircolors
+#################################################################
+
+# FILE: home/.dircolors
+#
+# Konfiguration der Farben für die Verzeichnisauflistung (ls --color).
+# Syntax: Jede Dateiendung MUSS in einer eigenen Zeile stehen.
+# Anwendung: eval "$(dircolors -b ~/.dircolors)"
+
+TERM xterm
+TERM xterm-256color
+TERM screen-256color
+
+# ──────────────────────────────────────────────────────────────
+# 1. Standardfarben für Dateitypen
+# ──────────────────────────────────────────────────────────────
+NORMAL 00           # Standard
+FILE 00             # Normale Datei
+DIR 01;34           # Verzeichnis (Bold Blue)
+LINK 01;36          # Symbolischer Link (Bold Cyan)
+MULTIHARDLINK 00    # Mehrfach verlinkt
+FIFO 40;33          # Named Pipe (Yellow Background)
+SOCK 01;35          # Socket (Bold Magenta)
+DOOR 01;35          # Door (Bold Magenta)
+BLK 40;33;01        # Block-Spezialdatei
+CHR 40;33;01        # Zeichen-Spezialdatei
+ORPHAN 40;31;01     # Broken Symlink (Red Background)
+MISSING 00          # Fehlende Datei
+EXEC 01;32          # Ausführbare Datei (Bold Green)
+
+# ──────────────────────────────────────────────────────────────
+# 2. Dateiattribute & Permissions
+# ──────────────────────────────────────────────────────────────
+SETUID 37;41                 # White on Red
+SETGID 30;43                 # Black on Yellow
+CAPABILITY 30;41             # Black on Red
+STICKY_OTHER_WRITABLE 30;42  # Black on Green
+OTHER_WRITABLE 34;42         # Blue on Green
+STICKY 37;44                 # White on Blue
+
+# ──────────────────────────────────────────────────────────────
+# 3. Archive & Komprimierte Dateien (Bold Red)
+# ──────────────────────────────────────────────────────────────
+.tar      01;31
+.tar.gz   01;31
+.tgz      01;31
+.tar.bz2  01;31
+.tar.xz   01;31
+.tar.zst  01;31
+.zip      01;31
+.gz       01;31
+.bz2      01;31
+.xz       01;31
+.7z       01;31
+.rar      01;31
+.rpm      01;31
+.deb      01;31
+.iso      01;31
+
+# ──────────────────────────────────────────────────────────────
+# 4. Bilddateien (Bold Magenta)
+# ──────────────────────────────────────────────────────────────
+.jpg      01;35
+.jpeg     01;35
+.png      01;35
+.gif      01;35
+.bmp      01;35
+.svg      01;35
+.webp     01;35
+.ico      01;35
+
+# ──────────────────────────────────────────────────────────────
+# 5. Audio-Dateien (Bold Cyan)
+# ──────────────────────────────────────────────────────────────
+.mp3      01;36
+.ogg      01;36
+.flac     01;36
+.wav      01;36
+.m4a      01;36
+.opus     01;36
+
+# ──────────────────────────────────────────────────────────────
+# 6. Video-Dateien (Bold Yellow)
+# ──────────────────────────────────────────────────────────────
+.mp4      01;33
+.mkv      01;33
+.avi      01;33
+.mov      01;33
+.webm     01;33
+
+# ──────────────────────────────────────────────────────────────
+# 7. Quellcode & Scripts (Bold Green)
+# ──────────────────────────────────────────────────────────────
+.sh       01;32
+.bash     01;32
+.py       01;32
+.c        01;32
+.cpp      01;32
+.js       01;32
+.ts       01;32
+.go       01;32
+.rs       01;32
+Makefile  01;32
+makefile  01;32
+
+# ──────────────────────────────────────────────────────────────
+# 8. Konfigurationsdateien (Yellow)
+# ──────────────────────────────────────────────────────────────
+.yml      00;33
+.yaml     00;33
+.json     00;33
+.toml     00;33
+.conf     00;33
+.env      00;33
+*rc       00;33
+.gitignore 00;33
+
+# ──────────────────────────────────────────────────────────────
+# 9. Dokumentation (White)
+# ──────────────────────────────────────────────────────────────
+README    01;37
+README.md 01;37
+LICENSE   01;37
+.md       00;37
+.txt      00;37
+.pdf      00;37
+
+# ──────────────────────────────────────────────────────────────
+# 10. Web & DevOps (Cyan/Blue)
+# ──────────────────────────────────────────────────────────────
+.html     00;36
+.css      00;36
+Dockerfile 00;34
+.tf       00;34
+
+# ──────────────────────────────────────────────────────────────
+# 11. Logs & Backups (Red / Grey)
+# ──────────────────────────────────────────────────────────────
+.log      00;31
+.err      00;31
+.bak      01;30
+.old      01;30
+.swp      01;30
+*~        01;30
+
+# ──────────────────────────────────────────────────────────────
+# 12. Windows-Executables (Bold Green)
+# ──────────────────────────────────────────────────────────────
+.exe      01;32
+.bat      01;32
+.ps1      01;32
+
+
+### END OF FILE: home\.dircolors
+
+#################################################################
+### BEGIN FILE: home\.nanorc
+#################################################################
+
+# FILE: home/.nanorc
+#
+# Konfiguration für den GNU Nano Editor.
+# Optimiert für moderne Workflows (Shortcuts), Lesbarkeit und Konsistenz
+# mit Projekt-Standards (Tabs vs. Spaces).
+
+# ──────────────────────────────────────────────────────────────
+# 1. Editor-Verhalten
+# ──────────────────────────────────────────────────────────────
+# Grundlegende Textverarbeitungs-Logik.
+set autoindent          # Neue Zeile übernimmt die Einrückung der vorherigen
+set tabsize 4           # Tabulatorbreite (korrespondiert mit .editorconfig)
+set tabstospaces        # Konvertiert Tabs beim Tippen direkt in Leerzeichen
+set softwrap            # Zeilenumbruch nur visuell (keine Änderung der Datei)
+set atblanks            # Bricht Zeilen nur an Wortgrenzen (Leerzeichen) um
+set zap                 # Erlaubt das Löschen markierter Bereiche mit Backspace/Entf
+set noconvert           # Behält Dateiformate (Unix/DOS) beim Öffnen bei
+set jumpyscrolling      # Scrollt in größeren Blöcken für bessere Performance
+set magic               # Verbesserte Dateityperkennung anhand des Inhalts
+set locking             # Erzeugt Sperrdateien (.swp), um Schreibkonflikte zu vermeiden
+
+# ──────────────────────────────────────────────────────────────
+# 2. Anzeige & Interface (UI)
+# ──────────────────────────────────────────────────────────────
+# Visuelle Hilfen für die Navigation.
+set linenumbers         # Permanent Zeilennummern am linken Rand einblenden
+set constantshow        # Zeigt Zeile/Spalte/Zeichenanzahl dauerhaft an
+set indicator           # Blendet einen vertikalen Scrollbalken rechts ein
+set minibar             # Nutzt eine einzeilige Statusleiste für mehr Editorplatz
+set stateflags          # Zeigt Modifikationen (*) oben rechts an
+set showcursor          # Macht den Cursor auch im Hilfemenü sichtbar
+
+# ──────────────────────────────────────────────────────────────
+# 3. Suche & History
+# ──────────────────────────────────────────────────────────────
+# Speichert den Kontext über Sitzungen hinweg.
+set historylog          # Merkt sich die letzten Suchbegriffe
+set positionlog         # Öffnet Dateien an der zuletzt bearbeiteten Stelle
+
+# ──────────────────────────────────────────────────────────────
+# 4. Syntax-Highlighting
+# ──────────────────────────────────────────────────────────────
+# Integriert Farbschemata für verschiedene Sprachen.
+# Pfad ist Standard für die meisten Linux-Distributionen.
+include "/usr/share/nano/*.nanorc"
+
+# ──────────────────────────────────────────────────────────────
+# 5. Tastenkombinationen (Modern Style)
+# ──────────────────────────────────────────────────────────────
+# Diese Bindings passen Nano an gängige Desktop-Standards an.
+# HINWEIS: Erfordert 'stty -ixon' in der .bashrc, damit ^S/^Q funktionieren.
+
+bind M-C copy main       # Alt+C: In den Puffer kopieren
+bind M-V paste all      # Alt+V: Aus dem Puffer einfügen
+bind ^F whereis all     # Ctrl+F: Suche starten
+bind ^H replace main    # Ctrl+H: Suchen und Ersetzen
+bind ^S savefile main   # Ctrl+S: Datei speichern (Quick Save)
+bind ^Q exit all        # Ctrl+Q: Editor beenden
+bind ^Z undo main       # Ctrl+Z: Letzten Schritt rückgängig machen
+bind ^Y redo main       # Ctrl+Y: Schritt wiederholen
+
+# BEST PRACTICE: ^D löscht markierten Text oder das Zeichen unter dem
+# Cursor (zap), ohne das Clipboard mit dem gelöschten Inhalt zu überschreiben.
+bind ^D zap main
+
+# ──────────────────────────────────────────────────────────────
+# 6. Navigation (Übersicht)
+# ──────────────────────────────────────────────────────────────
+# Standard-Navigation (ohne explizite Binds zur Vermeidung von Konflikten):
+#   Wort vor:       Alt + Pfeil-Rechts
+#   Wort zurück:    Alt + Pfeil-Links
+#   Zeilenanfang:   Ctrl + A (Pos1)
+#   Zeilenende:     Ctrl + E (Ende)
+#   Seite hoch:     PageUp
+#   Seite runter:   PageDown
+
+# ──────────────────────────────────────────────────────────────
+# 7. Farbschema (Design & Kontrast)
+# ──────────────────────────────────────────────────────────────
+# Nutzt Cyan/Blue-Akzente für eine gute Trennung zwischen UI und Code.
+set titlecolor black,cyan       # Balken am oberen Rand
+set statuscolor black,cyan      # Balken am unteren Rand
+set keycolor white,blue         # Tastaturkürzel in der Hilfe
+set numbercolor yellow,normal   # Zeilennummern (Gelb auf Standardhintergrund)
+set errorcolor white,red        # Kritische Fehlermeldungen
+set selectedcolor black,white   # Markierter Text (Invertiert)
+
+
+### END OF FILE: home\.nanorc
+
+
+# CHECKSUM SHA256: 93b83a1b45be58ef0cd309c5b47c88ec0f99dffbdabeaf182bc0afc036ce5b05

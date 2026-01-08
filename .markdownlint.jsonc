@@ -1,0 +1,70 @@
+{
+  // FILE: .markdownlint.jsonc
+  // ──────────────────────────────────────────────────────────────
+  // REGEL-DEFINITIONEN FÜR MARKDOWNLINT (v1.2.1)
+  // ──────────────────────────────────────────────────────────────
+  // Zweck:       Erzwingt ein sauberes Dokumentations-Layout.
+  // Kompatibilität: .editorconfig, markdownlint-cli2.jsonc.
+  // ──────────────────────────────────────────────────────────────
+
+  "default": true,
+
+  // MD013: Zeilenlänge deaktiviert
+  // Erlaubt fließenden Text, was Git-Diffs sauberer hält.
+  "MD013": false,
+
+  // MD001: Überschriften-Hierarchie erzwingen (H1 -> H2 -> H3)
+  "MD001": true,
+
+  // MD036: Kein Emphasis als Überschrift
+  // Verhindert fettgedruckte Zeilen als Header-Ersatz (dein MD036 Fix).
+  "MD036": true,
+
+  // MD024: Doppelte Überschriften nur auf gleicher Ebene verhindern
+  "MD024": {
+    "siblings_only": true
+  },
+
+  // MD025: Maximal eine H1 pro Datei (Titel der Seite)
+  "MD025": {
+    "level": 1
+  },
+
+  // MD026: Satzzeichen am Ende von Überschriften
+  // Erlaubt Fragezeichen oder Punkte in technischen Titeln.
+  "MD026": false,
+
+  // MD029: Geordnete Listen: Alle mit "1." beginnen
+  // Verhindert Re-Nummerierungs-Chaos bei Verschiebungen im Git.
+  "MD029": {
+    "style": "ordered"
+  },
+
+  // MD007: Einrückung von Listen
+  // Synchronisiert mit .editorconfig (indent_size = 4).
+  "MD007": {
+    "indent": 4
+  },
+
+  // MD031: Leerzeilen um Codeblöcke erzwingen
+  "MD031": true,
+
+  // MD022: Leerzeilen um Überschriften erzwingen
+  "MD022": true,
+
+  // MD009: Abschließende Leerzeichen erlauben
+  // Notwendig für harte Zeilenumbrüche (Double Space) in Markdown.
+  "MD009": false,
+
+  // MD040: Codeblöcke: Sprache verpflichtend
+  // Sorgt für korrektes Syntax-Highlighting (bash, json, etc.).
+  "MD040": true,
+
+  // MD033: Inline HTML erlauben
+  // Erforderlich für die Box-Header-Elemente in deinen Docs.
+  "MD033": false,
+
+  // MD041: Erste Zeile muss keine H1 sein
+  // Erlaubt das Platzieren deiner Box-Header am Dateianfang.
+  "MD041": false
+}

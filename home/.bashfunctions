@@ -1,0 +1,141 @@
+#
+# FILE: home/.bashfunctions
+# ──────────────────────────────────────────────────────────────
+# SAMMLUNG NÜTZLICHER SHELL-FUNKTIONEN
+# ──────────────────────────────────────────────────────────────
+# Zweck:    Erweiterte Logik für Suche, Archivierung und System-
+#           Status. Optimiert für Linux und Windows (Git-Bash).
+# Abhängigkeiten: .bashenv (für $PLATFORM), libcolors.sh (empfohlen).
+# ──────────────────────────────────────────────────────────────
+
+# @section Suche & Finden
+
+# @description Schnelle Dateisuche im aktuellen Verzeichnis (case-insensitive).
+# @param $1 Suchbegriff (Teil des Dateinamens).
+# @stdout Liste der gefundenen Pfade.
+f() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: f <dateiname>"
+        return 1
+    fi
+    find . -type f -iname "*$1*"
+}
+
+# @description Rekursive Textsuche in Dateien, ignoriert Binärdaten.
+# @param $1 Suchbegriff oder Regular Expression.
+# @stdout Zeilen mit Fundstellen inklusive Dateinamen und Zeilennummer.
+grepr() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: grepr <suchbegriff>"
+        return 1
+    fi
+    grep -rnI "$1" .
+}
+
+# @section Archivierung & Packen
+
+# @description Intelligentes Entpacken verschiedenster Archivtypen.
+# @param $1 Pfad zum Archiv.
+# @stdout Status des Entpackvorgangs.
+extract() {
+    if [[ -f "$1" ]]; then
+        case "$1" in
+            *.tar.bz2)   tar xjf "$1"     ;;
+            *.tar.gz)    tar xzf "$1"     ;;
+            *.bz2)       bunzip2 "$1"     ;;
+            *.rar)       unrar x "$1"     ;;
+            *.gz)        gunzip "$1"      ;;
+            *.tar)       tar xf "$1"      ;;
+            *.tbz2)      tar xjf "$1"     ;;
+            *.tgz)       tar xzf "$1"     ;;
+            *.zip)       unzip "$1"       ;;
+            *.Z)         uncompress "$1"  ;;
+            *.7z)        7z x "$1"        ;;
+            *)           echo "'$1' kann nicht via extract() entpackt werden." ;;
+        esac
+    else
+        echo "'$1' ist keine gültige Datei."
+        return 1
+    fi
+}
+
+# @section Netzwerk-Helfer
+
+# @description Zeigt die lokale und öffentliche IP-Adresse an.
+# @stdout Lokale IP (Interface) und öffentliche IP (via ifconfig.me).
+myip() {
+    echo -n "Lokale IP: "
+    if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+        hostname -I | awk '{print $1}'
+    elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
+        ipconfig | grep -i "IPv4" | awk -F: '{ print $2 }' | head -n 1 | sed 's/^[ \t]*//'
+    fi
+
+    if command -v curl >/dev/null 2>&1; then
+        echo -n "Öffentliche IP: "
+        curl -s https://ifconfig.me
+        echo ""
+    fi
+}
+
+# @section Plattform-Spezifische Helfer
+
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    # @description Listet die 10 Prozesse mit dem höchsten Speicherverbrauch.
+    top_mem() {
+        ps auxf | sort -nr -k 4 | head -n 10
+    }
+
+    # @description Listet die 10 Prozesse mit der höchsten CPU-Last.
+    top_cpu() {
+        ps auxf | sort -nr -k 3 | head -n 10
+    }
+
+elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
+    # @description Wandelt Windows-Pfade in Unix-Pfade um.
+    # @param $1 Windows-Pfad (optional). Nutzt Clipboard, wenn leer.
+    # @stdout Konvertierter Unix-Pfad.
+    upath() {
+        if [[ -z "${1:-}" ]]; then
+            # PowerShell zur Clipboard-Abfrage (robusterer Aufruf)
+            local clip
+            clip=$(powershell.exe -NoProfile -Command "Get-Clipboard" 2>/dev/null | tr -d '\r')
+            [[ -n "$clip" ]] && cygpath -u "$clip" || echo "Zwischenablage leer."
+        else
+            cygpath -u "$1"
+        fi
+    }
+fi
+
+# @section System-Status
+
+# @description Kurzer Integritätscheck der Systemressourcen.
+# @stdout Zusammenfassung von Datum, User, Uptime und Disk-Usage.
+health() {
+    echo "--- System Health Check ---"
+    echo -n "Datum:  " && date
+    echo -n "User:   " && whoami
+    echo -n "Uptime: " && uptime -p
+
+    if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+        echo "Disk Usage:"
+        df -h / | tail -n 1
+    elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
+        echo "Disk Usage (C:):"
+        df -h /c | tail -n 1
+    fi
+}
+
+# @section Datei- & Verzeichnis-Manipulation
+
+# @description Erstellt ein Verzeichnis und wechselt sofort hinein.
+# @param $1 Name oder Pfad des Verzeichnisses.
+mkd() {
+    if [[ -z "${1:-}" ]]; then
+        echo "Usage: mkd <verzeichnis>"
+        return 1
+    fi
+    mkdir -p "$1" && cd "$1"
+}
+
+true

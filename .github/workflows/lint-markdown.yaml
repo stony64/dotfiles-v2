@@ -1,0 +1,39 @@
+# FILE: .github/workflows/lint-markdown.yml
+# ──────────────────────────────────────────────────────────────
+# GITHUB ACTION: MARKDOWN LINTING (v1.2.1)
+# ──────────────────────────────────────────────────────────────
+# Zweck:       Automatische Prüfung der Dokumentation bei Pushes
+#              und Pull Requests auf Basis deiner Linter-Regeln.
+# ──────────────────────────────────────────────────────────────
+
+name: Lint Markdown
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - '**/*.md'
+      - '.markdownlint*'
+      - 'markdownlint-cli2.jsonc'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - '**/*.md'
+      - '.markdownlint*'
+      - 'markdownlint-cli2.jsonc'
+
+jobs:
+  markdownlint:
+    name: Markdown Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Markdownlint-cli2
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          # Verweist explizit auf deine zentrale Konfigurationsdatei.
+          # Die Action erkennt die Globs und Ignores automatisch daraus.
+          config: "markdownlint-cli2.jsonc"

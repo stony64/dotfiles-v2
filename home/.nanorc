@@ -1,0 +1,72 @@
+#
+# FILE: home/.nanorc
+# ──────────────────────────────────────────────────────────────
+# GNU NANO KONFIGURATION (v1.2.1)
+# ──────────────────────────────────────────────────────────────
+# Zweck:       Modernisierung der Steuerung und visuelle Optimierung.
+# Kompatibilität: Linux (Bash/Zsh) & Windows (Git Bash).
+# ──────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────
+# 1. EDITOR-VERHALTEN & FORMATIERUNG
+# ──────────────────────────────────────────────────────────────
+set autoindent          # Einrückung beibehalten
+set tabsize 4           # Synchron zu .editorconfig
+set tabstospaces        # Leerzeichen statt Hard-Tabs
+set softwrap            # Zeilenumbruch nur visuell
+set atblanks            # Umbruch an Wortgrenzen
+set zap                 # Backspace löscht markierte Blöcke
+set noconvert           # Zeilenenden (LF/CRLF) beim Öffnen respektieren
+set magic               # Erweiterte Dateityperkennung
+set locking             # Schreibschutz-Dateien (.swp) aktivieren
+
+# ──────────────────────────────────────────────────────────────
+# 2. INTERFACE (UI) & VISUALS
+# ──────────────────────────────────────────────────────────────
+set linenumbers         # Zeilennummern einblenden
+set constantshow        # Cursor-Position permanent anzeigen
+set indicator           # Scrollbar anzeigen
+set minibar             # Kompakte Statusleiste (mehr Platz für Code)
+set stateflags          # Zeigt Speichermodus und Modifikationen an
+set showcursor          # Cursor auch in Menüs sichtbar
+
+# ──────────────────────────────────────────────────────────────
+# 3. HISTORIE & POSITIONIERUNG
+# ──────────────────────────────────────────────────────────────
+set historylog          # Such-Historie speichern
+set positionlog         # Letzte Cursor-Position beim Öffnen wiederherstellen
+
+# ──────────────────────────────────────────────────────────────
+# 4. SYNTAX-HIGHLIGHTING (PLATFORM-AWARE)
+# ──────────────────────────────────────────────────────────────
+# Versucht die Standardpfade für Linux und Git Bash einzubinden.
+include "/usr/share/nano/*.nanorc"
+include "/usr/share/nano-syntax-highlighting/*.nanorc"
+# Git Bash spezifisch
+include "/etc/nanorc"
+
+# ──────────────────────────────────────────────────────────────
+# 5. MODERN BINDINGS (SHORTCUTS)
+# ──────────────────────────────────────────────────────────────
+# WICHTIG: Erfordert 'stty -ixon' in der .bashrc für ^S/^Q Support.
+
+bind M-C copy main           # Alt+C: Kopieren
+bind M-V paste all          # Alt+V: Einfügen
+bind ^F whereis all         # Ctrl+F: Suchen
+bind ^H replace main        # Ctrl+H: Ersetzen
+bind ^S savefile main       # Ctrl+S: Schnellspeichern
+bind ^Q exit all            # Ctrl+Q: Beenden
+bind ^Z undo main           # Ctrl+Z: Rückgängig
+bind ^Y redo main           # Ctrl+Y: Wiederholen
+bind ^D zap main            # Ctrl+D: Zeichen/Block löschen (ohne Cut)
+
+# ──────────────────────────────────────────────────────────────
+# 6. DESIGN (FARBSCHEMA)
+# ──────────────────────────────────────────────────────────────
+# Farblich abgestimmt auf libcolors.sh
+set titlecolor black,cyan
+set statuscolor black,cyan
+set keycolor white,blue
+set numbercolor yellow,normal
+set errorcolor white,red
+set selectedcolor black,white

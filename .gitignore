@@ -1,0 +1,90 @@
+#
+# FILE: .gitignore
+# ──────────────────────────────────────────────────────────────
+# ZENTRALE GIT-IGNORE KONFIGURATION (v1.2.1)
+# ──────────────────────────────────────────────────────────────
+# Zweck:       Schutz vor sensiblen Daten und System-Müll.
+#              Sicherstellung der Repository-Sauberkeit.
+# ──────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────
+# 1. LOKALE & SENSIBLE DATEN
+# ──────────────────────────────────────────────────────────────
+# Alles, was auf '_local' endet, wird niemals eingecheckt.
+*_local
+.bash*_local
+.bash_history
+.bash_sessions/
+.env
+.netrc
+*.key
+*.pem
+
+# ──────────────────────────────────────────────────────────────
+# 2. EDITOR & IDE (VS Code / Nano / Vim)
+# ──────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!*.code-workspace
+
+# Editor-Backups und Swap-Files
+*.swp
+*.swo
+*~
+*.bak
+*.old
+*.orig
+*.rej
+.history/
+
+# ──────────────────────────────────────────────────────────────
+# 3. SYSTEM-MÜLL (OS-SPECIFIC)
+# ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+.directory
+ehthumbs.db
+[Dd]ebin/
+
+# ──────────────────────────────────────────────────────────────
+# 4. LOGS & TEMPORÄRE DATEN (SANDBOX)
+# ──────────────────────────────────────────────────────────────
+# Logs und die Zustandsdatei des Controllers
+*.log
+*.tmp
+.dotfiles_state
+.nfs*
+
+# Test-Sandbox (Falls test_suite.sh lokal Dateien erzeugt)
+test_sandbox/
+tests/out/
+
+# ──────────────────────────────────────────────────────────────
+# 5. WHITELIST (KERN-DATEIEN EXPLIZIT ERLAUBEN)
+# ──────────────────────────────────────────────────────────────
+# Wir stellen sicher, dass alle Modul-Dateien trotz obiger Regeln
+# (z.B. *.bak oder System-Müll) erfasst werden können.
+
+# Hauptkomponenten
+!dotfilesctl.sh
+!test_suite.sh
+!.shellcheckrc
+!.editorconfig
+!.gitattributes
+!.gitignore
+
+# Verzeichnisse (Inhalte erlauben)
+!lib/
+!home/
+!docs/
+!config/
+!config/*.example
+
+# Spezifische Dotfiles in home/
+!home/.bash*
+!home/.dircolors
+!home/.nanorc

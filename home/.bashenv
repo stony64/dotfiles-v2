@@ -1,0 +1,97 @@
+#
+# FILE: home/.bashenv
+# ──────────────────────────────────────────────────────────────
+# ZENTRALE UMGEBUNGSVARIABLEN, PFADE UND SHELL-OPTIONEN
+# ──────────────────────────────────────────────────────────────
+# Zweck:    Konfiguration des fundamentalen Verhaltens der Shell.
+#           Wird von der .bashrc geladen.
+# Abhängigkeiten: libcolors.sh (optional für Manpage-Farben).
+# ──────────────────────────────────────────────────────────────
+
+# @section 0. Farbauflösung (Basis laden)
+# Lädt die atomaren Farbcodes für konsistente UI-Elemente.
+DOT_REPO="${DOTFILES_REPO_PATH:-$HOME/.dotfiles}"
+COLOR_LIB="${DOT_REPO}/lib/libcolors.sh"
+
+if [[ -f "$COLOR_LIB" ]]; then
+    # Wir sourcen die Library, um ESC_START/END und COL_* verfügbar zu haben
+    # shellcheck disable=SC1090
+    source "$COLOR_LIB"
+fi
+
+# @section 1. Pfad-Initialisierung
+# Erweitert die PATH-Variable um benutzerdefinierte Binärverzeichnisse.
+if [[ -d "$HOME/bin" ]] ; then
+    PATH="$HOME/bin:$PATH"
+fi
+export PATH
+
+# @section 2. Bash History & Shell-Optionen
+# Optimierung des Shell-Verhaltens für effizientes Arbeiten.
+export HISTCONTROL="ignoreboth:erasedups"
+export HISTIGNORE="la:ll:lah:lat:ls:cd ..:exit:mc:au:fg:bg:jobs:history"
+export HISTSIZE=8192
+export HISTFILESIZE=16384
+
+shopt -s histappend   # History anhängen statt überschreiben
+shopt -s cmdhist      # Mehrzeilige Befehle einzeilig speichern
+shopt -s cdspell      # Autokorrektur bei Verzeichnisnamen
+shopt -s checkwinsize # Fenstergröße nach jedem Befehl prüfen
+shopt -s globstar     # Erlaubt rekursive Suche mit **
+
+# @section 3. Manpages in Farbe (Linux-only)
+# Nutzt ANSI-Farben zur Hervorhebung in Handbüchern via LESS_TERMCAP.
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    export MANPAGER="less -s -M +Gg"
+
+    # Nutzung der konsistenten COL_ Variablen aus libcolors.sh
+    export LESS_TERMCAP_mb="${ESC_START}${COL_RED}${ESC_END}"      # Blinkend
+    export LESS_TERMCAP_md="${ESC_START}${ATTR_BOLD};33${ESC_END}"  # Headlines (Gelb Fett)
+    export LESS_TERMCAP_me="${ESC_START}${ATTR_RESET}${ESC_END}"    # Ende aller Modi
+    export LESS_TERMCAP_se="${ESC_START}${ATTR_RESET}${ESC_END}"    # Ende Standout
+    export LESS_TERMCAP_so="${ESC_START}01;44;33${ESC_END}"         # Statuszeile
+    export LESS_TERMCAP_ue="${ESC_START}${ATTR_RESET}${ESC_END}"    # Ende Unterstreichung
+    export LESS_TERMCAP_us="${ESC_START}${ATTR_UNDERLINE};32${ESC_END}" # Unterstrichen (Grün)
+fi
+
+# @section 4. SSH-Erkennung & Locales
+# Anpassung für Remote-Sitzungen und Zeichensätze.
+if [[ -n "${SSH_CONNECTION:-}" ]]; then
+    export TMOUT=0
+    if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+        export LC_ALL="de_DE.UTF-8"
+    else
+        export LC_ALL="en_US.UTF-8"
+    fi
+fi
+
+# @section 5. Host-spezifische Pfade (Linux)
+# Individuelle Anpassungen basierend auf dem Hostnamen.
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    case "$(hostname)" in
+        raspifix) [[ -d "/opt/script" ]] && PATH="$PATH:/opt/script" ;;
+        proxmox*) [[ -d "/opt/scripts" ]] && PATH="$PATH:/opt/scripts" ;;
+        *backup*) export MAIL_ON_ERROR="root@localhost" ;;
+    esac
+fi
+
+# @section 6. Tool-Initialisierungen
+# Laden von Drittanbieter-Tools (FZF, Dircolors).
+if command -v fzf >/dev/null 2>&1 && [[ -f "$HOME/.fzf.bash" ]]; then
+    # shellcheck disable=SC1091
+    source "$HOME/.fzf.bash"
+fi
+
+if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+    if [[ -f "$HOME/.dircolors" ]]; then
+        eval "$(dircolors -b "$HOME/.dircolors")"
+    elif [[ -f /etc/DIR_COLORS ]]; then
+        eval "$(dircolors -b /etc/DIR_COLORS)"
+    fi
+fi
+
+# @section 7. Lokale Overrides
+# Erlaubt systemspezifische Anpassungen ohne das Repo zu verändern.
+[[ -f "$HOME/.bash_env_local" ]] && source "$HOME/.bash_env_local"
+
+true

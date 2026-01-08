@@ -1,0 +1,73 @@
+#
+# FILE: .gitattributes
+# ──────────────────────────────────────────────────────────────
+# ZENTRALE GIT-KONFIGURATION FÜR ZEILENENDEN (v1.2.1)
+# ──────────────────────────────────────────────────────────────
+# Zweck:       Erzwingt Unix-Zeilenenden (LF) für Shell-Skripte.
+#              Verhindert Korruption der Skripte unter Windows.
+# ──────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────
+# 1. Standard-Verhalten
+# ──────────────────────────────────────────────────────────────
+# Automatische Erkennung für Textdateien.
+* text=auto
+
+# ──────────────────────────────────────────────────────────────
+# 2. Shell-Skripte & Dotfiles (Zwingend LF)
+# ──────────────────────────────────────────────────────────────
+# Skripte und Bash-Konfigurationen benötigen zwingend LF.
+*.sh           text eol=lf
+.bash* text eol=lf
+bashrc         text eol=lf
+bashenv        text eol=lf
+bashaliases    text eol=lf
+bashprompt     text eol=lf
+bashfunctions  text eol=lf
+.dircolors     text eol=lf
+.nanorc        text eol=lf
+
+# ──────────────────────────────────────────────────────────────
+# 3. Konfigurationen & Daten
+# ──────────────────────────────────────────────────────────────
+*.json         text eol=lf
+*.jsonc        text eol=lf
+*.yml          text eol=lf
+*.yaml         text eol=lf
+*.toml         text eol=lf
+*.conf         text eol=lf
+*.ini          text eol=lf
+.editorconfig  text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+.shellcheckrc  text eol=lf
+
+# ──────────────────────────────────────────────────────────────
+# 4. Dokumentation
+# ──────────────────────────────────────────────────────────────
+*.md           text eol=lf
+*.txt          text eol=lf
+LICENSE        text eol=lf
+README         text eol=lf
+
+# ──────────────────────────────────────────────────────────────
+# 5. Binärdateien
+# ──────────────────────────────────────────────────────────────
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.pdf  binary
+*.zip  binary
+*.7z   binary
+*.gz   binary
+*.tgz  binary
+
+# ──────────────────────────────────────────────────────────────
+# 6. Windows-spezifische Ausnahmen (Optional)
+# ──────────────────────────────────────────────────────────────
+# Falls du Batch oder PowerShell nutzt, die CRLF benötigen:
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
