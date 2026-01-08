@@ -193,21 +193,24 @@ cmd_diagnosis_handler() {
 
     # Ausführung
     if [[ "$all_users" == true ]]; then
-        # Nur Linux: Iteriere über alle relevanten User
-        if [[ -f /etc/passwd ]]; then
+        # Nutzt die plattformspezifische Prüfung aus libplatform_*.sh
+        if platform_linux_is_active; then
+            # Nutzt die zentrale User-Ermittlung statt awk-Hardcoding
             local extra_users
-            extra_users=$(awk -F: '$3 >= 1000 && $3 < 60000 { print $1 }' /etc/passwd)
+            extra_users=$(platform_linux_list_target_users)
+
+            # Root wird meist separat behandelt oder ist in der Liste
             perform_check "root"
             for u in $extra_users; do
+                [[ "$u" == "root" ]] && continue # Dopplung vermeiden
                 perform_check "$u"
             done
         else
-            log_error "--all-users wird auf dieser Plattform nicht unterstützt."
+            log_error "--all-users wird auf dieser Plattform aktuell nicht unterstützt."
             return 1
         fi
     else
         perform_check "$target_user"
     fi
-}
-
+    
 true
