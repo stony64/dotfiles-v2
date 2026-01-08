@@ -2,109 +2,68 @@
 #
 # ┌───────────────────────────────────────────────────────────────────────────┐
 # │ FILE: home/.bashrc                                                        │
-# │ ZWECK: Haupt-Konfigurationsfile für interaktive Shells (v1.2.1)           │
-# │ STANDARDS: set -u (optional), Bash >= 4.0, Google Shell Style Guide       │
+# │ ZWECK: Haupt-Konfigurationsfile (v1.2.3 - Centralized Edition)            │
 # └───────────────────────────────────────────────────────────────────────────┘
 
-# ──────────────────────────────────────────────────────────────
-# 0. INTERAKTIVITÄTS-CHECK
-# ──────────────────────────────────────────────────────────────
-# Verhindert Ausführung bei nicht-interaktiven Aufrufen (scp, rsync).
+# 1. INTERAKTIVITÄTS-CHECK
 case "$-" in
-    *i*) ;; # Interaktiv -> Fortfahren
+    *i*) ;;
     *) return ;;
 esac
 
-# ──────────────────────────────────────────────────────────────
-# 1. PLATTFORM-DETEKTION & INITIALISIERUNG
-# ──────────────────────────────────────────────────────────────
+# 2. MASTER-GUARD & PFADE (v1.2.3 Standard)
+# Wir verwenden KEIN readonly, um Fehler beim Re-Sourcing zu vermeiden
+DOTFILES_CORE_LOADED=1
+export DOTFILES_CORE_LOADED
+export REPO_ROOT="/opt/dotfiles"
 
-# Windows-spezifische Vorbereitung für native NTFS-Symlinks.
-if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
-    export MSYS="winsymlinks:nativestrict"
+# 3. ZENTRALE BIBLIOTHEKEN LADEN (Für Farben und Logik)
+# Diese Dateien liegen jetzt in /opt/dotfiles/lib/
+if [[ -d "$REPO_ROOT/lib" ]]; then
+    source "$REPO_ROOT/lib/libcolors.sh"
+    source "$REPO_ROOT/lib/libconstants.sh"
 fi
 
-# Zentrale Plattformvariable (v1.2.1 Standard)
-case "$(uname -s)" in
-    Linux*)                export PLATFORM="linux" ;;
-    MINGW*|MSYS*|CYGWIN*)  export PLATFORM="windows" ;;
-    *)                     export PLATFORM="unknown" ;;
-esac
-
-# ──────────────────────────────────────────────────────────────
-# 2. MODUL-ORCHESTRIERUNG (BOOTSTRAP)
-# ──────────────────────────────────────────────────────────────
-# Die Reihenfolge ist kritisch: Erst Basis-Umgebung, dann UI/Aliase.
-
-readonly BASH_MODULES=(
-    "$HOME/.bashenv"        # 1. Pfade & Shell-Optionen
-    "$HOME/.bashexports"    # 2. Tool-Exporte & Editoren
-    "$HOME/.bashprompt"     # 3. PS1-Konfiguration
-    "$HOME/.bashaliases"    # 4. Abkürzungen
-    "$HOME/.bashfunctions"  # 5. Erweiterte Logik
+# 4. MODUL-ORCHESTRIERUNG
+# Wir nutzen ein normales Array statt readonly
+BASH_MODULES=(
+    "$HOME/.bashenv"
+    "$HOME/.bashexports"
+    "$HOME/.bashprompt"
+    "$HOME/.bashaliases"
+    "$HOME/.bashfunctions"
 )
 
 for module in "${BASH_MODULES[@]}"; do
     if [[ -f "$module" ]]; then
         # shellcheck disable=SC1090
-        if ! source "$module"; then
-            # Fehlermeldung mit rotem Fallback, falls libcolors noch nicht geladen
-            echo -e "\e[31m[!] Fehler beim Laden des Moduls: ${module##*/}\e[0m" >&2
-        fi
+        source "$module" || echo -e "${UI_COL_RED:-}[!] Fehler in: ${module##*/}${UI_COL_RESET:-}" >&2
     fi
 done
 
-# ──────────────────────────────────────────────────────────────
-# 3. PROMPT-AKTIVIERUNG
-# ──────────────────────────────────────────────────────────────
-
+# 5. PROMPT-AKTIVIERUNG (Farben für Root/User)
+# Falls .bashprompt die Funktion set_bash_prompt bereitstellt:
 if command -v set_bash_prompt >/dev/null 2>&1; then
     set_bash_prompt
 else
-    # Minimalistischer Fallback-Prompt für den Havariefall
-    PS1='\[\e[32m\]\u@\h\[\e[0m\]:\[\e[34m\]\w\[\e[0m\]\$ '
+    # Fallback mit v1.2.3 Farbvariablen
+    if [[ $EUID -eq 0 ]]; then
+        PS1='\[${UI_COL_RED:-}\]\u@\h\[${UI_COL_RESET:-}\]:\[${UI_COL_BLUE:-}\]\w\[${UI_COL_RESET:-}\]\$ '
+    else
+        PS1='\[${UI_COL_GREEN:-}\]\u@\h\[${UI_COL_RESET:-}\]:\[${UI_COL_BLUE:-}\]\w\[${UI_COL_RESET:-}\]\$ '
+    fi
 fi
 
-# ──────────────────────────────────────────────────────────────
-# 4. AUTO-COMPLETION (BASH & GIT)
-# ──────────────────────────────────────────────────────────────
-# Aktiviert die intelligente Tab-Vervollständigung für Befehle und Git.
-
+# 6. AUTO-COMPLETION
 if ! shopt -oq posix; then
-    _BC_PATHS=(
-        "/usr/share/bash-completion/bash_completion"
-        "/etc/bash_completion"
-        "/usr/local/etc/bash_completion"
-        "/usr/share/git/completion/git-completion.bash"
-        "/usr/share/bash-completion/completions/git"
-    )
-
-    for bc_path in "${_BC_PATHS[@]}"; do
-        if [[ -f "$bc_path" ]]; then
-            # shellcheck disable=SC1090
-            source "$bc_path"
-        fi
-    done
-    unset _BC_PATHS
+    [[ -f /usr/share/bash-completion/bash_completion ]] && source /usr/share/bash-completion/bash_completion
+    [[ -f /etc/bash_completion ]] && source /etc/bash_completion
 fi
 
-# ──────────────────────────────────────────────────────────────
-# 5. TERMINAL-OPTIMIERUNG & LOKALE ANPASSUNGEN
-# ──────────────────────────────────────────────────────────────
+# 7. TERMINAL-FIX (Ctrl+S Support)
+[[ -t 0 ]] && stty -ixon 2>/dev/null
 
-# Deaktiviert XON/XOFF Flow Control.
-# Dies ermöglicht die Nutzung von Ctrl+S (Save) in Editoren wie Micro oder Nano.
-if [[ -t 0 ]]; then
-    stty -ixon 2>/dev/null
-fi
-
-# Lädt optionale, systemspezifische Anpassungen (nicht im Git/Whitelist).
-# Hier können private Aliase oder experimentelle Funktionen stehen.
+# 8. LOKALE ANPASSUNGEN
 [[ -f "$HOME/.bashrc_local" ]] && source "$HOME/.bashrc_local"
 
-# ──────────────────────────────────────────────────────────────
-# ABSCHLUSS
-# ──────────────────────────────────────────────────────────────
-
-# Erfolgreicher Exit-Status für das Sourcing
 true
