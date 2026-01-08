@@ -2,7 +2,7 @@
 #
 # ┌───────────────────────────────────────────────────────────────────────────┐
 # │ FILE: lib/libconstants.sh                                                 │
-# │ ZWECK: Zentrale Konfiguration, UI-Definitionen und Datenmodell            │
+# │ ZWECK: Zentrale Konfiguration, UI-Definitionen und Datenmodell (v1.2.1)    │
 # │ STANDARDS: set -euo pipefail, Bash >= 4.0, Google Shell Style Guide       │
 # └───────────────────────────────────────────────────────────────────────────┘
 
@@ -27,22 +27,21 @@ readonly SYMBOL_ERROR="✘"
 readonly SYMBOL_WARN="⚠"
 readonly SYMBOL_INFO="ℹ"
 
-# 4. CLI-FARBEN (Zusammengesetzt aus libcolors.sh)
-# Wir nutzen die atomaren Werte aus libcolors.sh, um finale Sequenzen zu bilden.
-# Fallback auf leere Strings, falls libcolors.sh nicht geladen ist.
-readonly UI_COL_RED="${UI_ESC_START:-}${UI_VAL_RED:-}${UI_ESC_END:-}"
-readonly UI_COL_GREEN="${UI_ESC_START:-}${UI_VAL_GREEN:-}${UI_ESC_END:-}"
-readonly UI_COL_YELLOW="${UI_ESC_START:-}${UI_VAL_YELLOW:-}${UI_ESC_END:-}"
-readonly UI_COL_BLUE="${UI_ESC_START:-}${UI_VAL_BLUE:-}${UI_ESC_END:-}"
-readonly UI_COL_MAGENTA="${UI_ESC_START:-}${UI_VAL_MAGENTA:-}${UI_ESC_END:-}"
-readonly UI_COL_CYAN="${UI_ESC_START:-}${UI_VAL_CYAN:-}${UI_ESC_END:-}"
-readonly UI_COL_WHITE="${UI_ESC_START:-}${UI_VAL_WHITE:-}${UI_ESC_END:-}"
-readonly UI_COL_RESET="${UI_ESC_START:-}${UI_ATTR_RESET:-}${UI_ESC_END:-}"
+# 4. CLI-FARBEN (Zusammengesetzt aus libcolors.sh Rohwerten)
+# Wir nutzen die *_VAL Konstanten, um eine Kollision mit readonly Namen zu vermeiden.
+readonly UI_COL_RED="${UI_ESC_START:-}${UI_COL_RED_VAL:-}${UI_ESC_END:-}"
+readonly UI_COL_GREEN="${UI_ESC_START:-}${UI_COL_GREEN_VAL:-}${UI_ESC_END:-}"
+readonly UI_COL_YELLOW="${UI_ESC_START:-}${UI_COL_YELLOW_VAL:-}${UI_ESC_END:-}"
+readonly UI_COL_BLUE="${UI_ESC_START:-}${UI_COL_BLUE_VAL:-}${UI_ESC_END:-}"
+readonly UI_COL_MAGENTA="${UI_ESC_START:-}${UI_COL_MAGENTA_VAL:-}${UI_ESC_END:-}"
+readonly UI_COL_CYAN="${UI_ESC_START:-}${UI_COL_CYAN_VAL:-}${UI_ESC_END:-}"
+readonly UI_COL_WHITE="${UI_ESC_START:-}${UI_COL_WHITE_VAL:-}${UI_ESC_END:-}"
+readonly UI_COL_RESET="${UI_ESC_START:-}${UI_ATTR_RESET_VAL:-}${UI_ESC_END:-}"
 
 # 5. TEXT-STILE
-readonly UI_ATTR_BOLD="${UI_ESC_START:-}${UI_ATTR_BOLD:-}${UI_ESC_END:-}"
-readonly UI_ATTR_DIM="${UI_ESC_START:-}${UI_ATTR_DIM:-}${UI_ESC_END:-}"
-readonly UI_ATTR_UNDERLINE="${UI_ESC_START:-}${UI_ATTR_UNDERLINE:-}${UI_ESC_END:-}"
+readonly UI_ATTR_BOLD="${UI_ESC_START:-}${UI_ATTR_BOLD_VAL:-}${UI_ESC_END:-}"
+readonly UI_ATTR_DIM="${UI_ESC_START:-}${UI_ATTR_DIM_VAL:-}${UI_ESC_END:-}"
+readonly UI_ATTR_UNDERLINE="${UI_ESC_START:-}${UI_ATTR_UNDERLINE_VAL:-}${UI_ESC_END:-}"
 
 # 6. LOG-FORMATIERUNG (Zusammengesetzte Präfixe)
 readonly LOG_PREFIX_INFO="${UI_COL_CYAN}${SYMBOL_INFO}${UI_COL_RESET}"

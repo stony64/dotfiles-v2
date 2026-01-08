@@ -2,7 +2,7 @@
 #
 # ┌───────────────────────────────────────────────────────────────────────────┐
 # │ FILE: dotfilesctl.sh                                                      │
-# │ ZWECK: Zentraler Orchestrator für das Dotfiles-Management                 │
+# │ ZWECK: Zentraler Orchestrator für das Dotfiles-Management (v1.2.1)        │
 # │ STANDARDS: set -euo pipefail, Bash >= 4.0, Modulares Design               │
 # └───────────────────────────────────────────────────────────────────────────┘
 
@@ -31,6 +31,7 @@ readonly REPO_ROOT="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 # 2. MODULARES LADEN DER BIBLIOTHEKEN
 # ──────────────────────────────────────────────────────────────
 
+# Die Reihenfolge ist wichtig: Farben/Konstanten zuerst, dann Logik.
 LIB_FILES=(
     "libcolors.sh"
     "libconstants.sh"
@@ -47,6 +48,7 @@ for lib in "${LIB_FILES[@]}"; do
         # shellcheck disable=SC1090
         source "$lib_path"
     else
+        # Fallback-Ausgabe, falls Farben noch nicht geladen werden konnten
         echo -e "\e[31mKRITISCH: Bibliothek nicht gefunden: $lib_path\e[0m" >&2
         exit 1
     fi
@@ -102,11 +104,11 @@ cmd_install_uninstall() {
             home="$(getent passwd "$u" | cut -d: -f6)"
             log_info "Verarbeite Benutzer: ${UI_COL_CYAN:-}$u${UI_COL_RESET:-} ($home)"
 
-            # Iteriere über Whitelist (In libconstants definiert)
             for file in "${DOTFILES_WHITELIST[@]}"; do
                 if [[ "$action" == "install" ]]; then
                     engine_create_link "${REPO_ROOT}/home/${file}" "${home}/${file}" || ((error_count++))
                 else
+                    # v1.2.1 Fix: Nutzt konsistente engine_remove_link Funktion
                     engine_remove_link "${home}/${file}" || ((error_count++))
                 fi
             done
@@ -135,7 +137,6 @@ cmd_health_checks() {
     local action="$1" os="$2" all="$3" user="$4"
     local total_warns=0 total_errors=0
 
-    # Interner Counter-Helper
     update_counters() {
         case "$1" in
             "${EXIT_OK:-0}")   return 0 ;;
@@ -191,6 +192,7 @@ cmd_health_checks() {
 # ──────────────────────────────────────────────────────────────
 
 main() {
+    # Default-Werte
     DRY_RUN=0
     STRICT_MODE_INTERNAL=0
     TARGET_USER=""
@@ -213,21 +215,20 @@ main() {
         esac
     done
 
-    readonly DRY_RUN STRICT_MODE_INTERNAL
+    # Exportiere Variablen für die Engine (idempotent)
+    export DRY_RUN
 
     # Plattform-Erkennung
-    local os_type
-    os_type="$(uname -s)"
     local os="unknown"
-    case "$os_type" in
+    case "$(uname -s)" in
         Linux*) os="linux" ;;
         MINGW*|MSYS*|CYGWIN*) os="windows" ;;
-        *) die "Betriebssystem nicht unterstützt: ${os_type}" ;;
+        *) die "Betriebssystem nicht unterstützt." ;;
     esac
 
     # Plattform-spezifische Initialisierung
     case "$os" in
-        linux)   platform_linux_init ;;
+        linux)  platform_linux_init ;;
         windows) platform_windows_init ;;
     esac
 
