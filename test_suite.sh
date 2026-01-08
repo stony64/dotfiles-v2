@@ -8,6 +8,10 @@
 
 set -euo pipefail
 
+# MASTER-GUARD setzen, damit Libs geladen werden dürfen
+DOTFILES_CORE_LOADED=1
+export DOTFILES_CORE_LOADED
+
 # ──────────────────────────────────────────────────────────────
 # 1. INITIALISIERUNG & BOOTSTRAP (v1.2.2 Pfad-Logik)
 # ──────────────────────────────────────────────────────────────
