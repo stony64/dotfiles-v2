@@ -45,7 +45,7 @@ Ein hochmodulares, plattformübergreifendes System zur Verwaltung von Konfigurat
 1. Repository klonen:
 
 ```bash
-git clone [https://github.com/dein-user/dotfiles.git](https://github.com/dein-user/dotfiles.git) ~/.dotfiles
+git clone [https://github.com/dein-user/dotfiles-v2.git](https://github.com/dein-user/dotfiles-v2.git) ~/.dotfiles
 cd ~/.dotfiles
 
 ```
