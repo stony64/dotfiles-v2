@@ -1,97 +1,111 @@
-# 📖 Installationsanleitung (v1.2.1)
+# 📖 Installationsanleitung (v1.2.2)
 
-Diese Anleitung führt Sie durch die saubere Einrichtung des Dotfiles-Systems auf **Linux** und **Windows**.
+Diese Anleitung führt Sie durch die professionelle Einrichtung des Dotfiles-Systems. In der Version 1.2.2 wird das Framework zentral verwaltet, um mehrere Benutzer gleichzeitig zu unterstützen.
 
 ## 📋 1. Voraussetzungen
 
 ### Global
 
 * **Bash:** Version 4.0 oder höher erforderlich (`bash --version`).
-* **Git:** Installiert und im Pfad (`git --version`).
+* **Root-Rechte:** Für die Installation in `/opt` und die Verwaltung anderer User sind `sudo`-Rechte erforderlich.
 
-### Windows-spezifisch (Git Bash / MSYS2)
+### Windows-spezifisch
 
-Das System nutzt **native NTFS-Symlinks**. Damit diese ohne Administratorrechte erstellt werden können, ist eine einmalige Konfiguration erforderlich:
-
-1. **Entwicklermodus aktivieren:** `Einstellungen -> Datenschutz und Sicherheit -> Für Entwickler -> Entwicklermodus: EIN`.
-2. **Umgebung:** Starten Sie die Git Bash nach der Aktivierung einmal neu.
-3. **Hintergrund:** Dies erlaubt der Bash, den Befehl `ln -s` auf NTFS-Dateisysteme zu mappen, was für die Konsistenz zwischen Windows und Linux entscheidend ist.
+* **Entwicklermodus:** Muss aktiviert sein, um native NTFS-Symlinks ohne Admin-Prompts zu erlauben.
 
 ---
 
 ## 🛠️ 2. Durchführung der Installation
 
-### Schritt A: Repository klonen
+### Schritt A: Zentrales Repository klonen
 
-Klonen Sie das Framework in das empfohlene Verzeichnis `.dotfiles` in Ihrem Home-Ordner:
+Wir installieren das Framework global in `/opt`, damit alle Systembenutzer auf dieselbe Logik zugreifen können.
 
 ```bash
-git clone https://github.com/stony64/dotfiles-v2.git ~/.dotfiles
-cd ~/.dotfiles
+# Repository nach /opt klonen
+sudo git clone https://github.com/stony64/dotfiles-v2.git /opt/dotfiles
+sudo chown -R root:root /opt/dotfiles
+cd /opt/dotfiles
 
 ```
 
-### Schritt B: Systemdiagnose (Doctor-Mode)
+### Schritt B: Globalen Befehl (Alias) einrichten
 
-Bevor Änderungen am Dateisystem vorgenommen werden, führt der integrierte Diagnose-Modus eine Prüfung aller Abhängigkeiten und Berechtigungen durch:
-
-```bash
-./dotfilesctl.sh doctor
-
-```
-
-> **Senior-Tipp:** Achten Sie besonders auf die Meldung zu den Symlink-Rechten unter Windows. Ein `[FAIL]` an dieser Stelle bedeutet meist, dass der Entwicklermodus noch deaktiviert ist.
-
-### Schritt C: Installation ausführen
-
-Sobald die Diagnose grün ist (`[OK]`), starten wir die Installation. Nutzen Sie den `--dry-run` Modus, um die geplanten Verknüpfungen vorab zu validieren:
+Erstellen Sie einen Symlink in den Systempfad, um den Controller überall als `dctl` aufrufen zu können:
 
 ```bash
-# 1. Simulation (keine Änderungen am Dateisystem)
-./dotfilesctl.sh install --dry-run
-
-# 2. Reale Installation (erstellt Symlinks und Backups)
-./dotfilesctl.sh install
+sudo ln -sf /opt/dotfiles/dotfilesctl.sh /usr/local/bin/dctl
+sudo chmod +x /usr/local/bin/dctl
 
 ```
 
 ---
 
-## 🧪 3. Verifizierung & Aktivierung
+## 🚀 3. Konfiguration der Benutzer
 
-Um die neue Konfiguration sofort wirksam zu machen, ohne das Terminal neu zu starten:
+### Szenario 1: Nur für den aktuellen Benutzer (Root)
 
-1. **Shell neu laden:** `source ~/.bashrc`
-2. **Alias-Check:** Geben Sie `dctl` ein. Wenn die Hilfe des Controllers erscheint, ist der Pfad korrekt gesetzt.
-3. **Git-Prompt Check:** Navigieren Sie in ein beliebiges Git-Repository. Der Prompt sollte nun automatisch den aktuellen Branch in Gelb anzeigen.
+```bash
+dctl install --user root
+
+```
+
+### Szenario 2: Für einen spezifischen Benutzer (z. B. "stony")
+
+Dies ist der empfohlene Weg für Multi-User-Systeme:
+
+```bash
+sudo dctl install --user stony
+
+```
+
+### Szenario 3: Für alle validen System-Benutzer
+
+Ideal für die Ersteinrichtung eines neuen Servers:
+
+```bash
+sudo dctl install --all-users
+
+```
+
+> **Senior-Tipp:** Nutzen Sie immer zuerst `dctl doctor --user <name>`, um sicherzustellen, dass das Zielverzeichnis des jeweiligen Benutzers bereit ist.
 
 ---
 
-## ⚠️ 4. Problemlösung (Troubleshooting)
+## 🧪 4. Verifizierung
 
-| Problem | Ursache | Lösung |
-| --- | --- | --- |
-| **"Operation not permitted"** | Windows Symlink-Rechte fehlen. | Entwicklermodus in Windows-Einstellungen aktivieren. |
-| **"SKIP: Destination exists"** | Eine echte Datei blockiert den Link. | Benennen Sie die existierende Datei manuell in `.bak` um. |
-| **Prompt sieht "kaputt" aus** | Terminal unterstützt kein ANSI/Farbe. | Nutzen Sie ein modernes Terminal (Windows Terminal, Alacritty, iTerm2). |
+Nach der Installation können Sie die Integrität jederzeit systemweit prüfen:
 
-### 💡 Best Practice: Lokale Anpassungen
+```bash
+dctl doctor --all-users
 
-Bearbeiten Sie **niemals** die Dateien im Repository für private Geheimnisse (z. B. API-Keys). Nutzen Sie stattdessen:
-`touch ~/.bashrc_local`
-Diese Datei wird von der `.bashrc` ignoriert (siehe `.gitignore`), aber automatisch geladen, falls sie existiert.
+```
 
 ---
 
 ## 🔄 5. Deinstallation
 
-Falls Sie das System entfernen möchten, stellt der Controller den Ursprungszustand weitestgehend wieder her:
+Um die Links für einen bestimmten Benutzer sauber zu entfernen:
 
 ```bash
-./dotfilesctl.sh uninstall
+sudo dctl uninstall --user stony
 
 ```
 
-*Hinweis: Zur Sicherheit werden existierende Backups (`.bak`) nicht automatisch gelöscht, sondern müssen bei Bedarf manuell bereinigt werden.*
+Um das gesamte System rückstandslos zu entfernen:
+
+1. `sudo dctl uninstall --all-users`
+2. `sudo rm /usr/local/bin/dctl`
+3. `sudo rm -rf /opt/dotfiles`
+
+---
+
+## ⚠️ 6. Wichtige Pfad-Änderungen in v1.2.2
+
+| Alt (v1.2.1) | Neu (v1.2.2) | Grund |
+| --- | --- | --- |
+| `~/.dotfiles` | `/opt/dotfiles` | Zentralisierung & Multi-User Support. |
+| `./dotfilesctl.sh` | `dctl` | Globaler Zugriff über den Systempfad. |
+| `install` (implizit) | `install --user <name>` | Explizite Sicherheit bei Multi-User-Systemen. |
 
 ---

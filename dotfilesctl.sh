@@ -2,7 +2,8 @@
 #
 # ┌───────────────────────────────────────────────────────────────────────────┐
 # │ FILE: dotfilesctl.sh                                                      │
-# │ ZWECK: Zentraler Orchestrator für das Dotfiles-Management (v1.2.1)        │
+# │ ZWECK: Zentraler Orchestrator (Multi-User & /opt fähig)                   │
+# │ VERSION: 1.2.2-stable                                                     │
 # │ STANDARDS: set -euo pipefail, Bash >= 4.0, Modulares Design               │
 # └───────────────────────────────────────────────────────────────────────────┘
 
@@ -19,6 +20,7 @@ if (( BASH_VERSINFO[0] < 4 )); then
 fi
 
 # Ermittlung des absoluten Repo-Roots (Symlink-aware)
+# Dies erlaubt den Aufruf via /usr/local/bin/dctl -> /opt/dotfiles/dotfilesctl.sh
 SOURCE="${BASH_SOURCE[0]}"
 while [[ -h "$SOURCE" ]]; do
     DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
@@ -31,7 +33,6 @@ readonly REPO_ROOT="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 # 2. MODULARES LADEN DER BIBLIOTHEKEN
 # ──────────────────────────────────────────────────────────────
 
-# Die Reihenfolge ist wichtig: Farben/Konstanten zuerst, dann Logik.
 LIB_FILES=(
     "libcolors.sh"
     "libconstants.sh"
@@ -48,7 +49,6 @@ for lib in "${LIB_FILES[@]}"; do
         # shellcheck disable=SC1090
         source "$lib_path"
     else
-        # Fallback-Ausgabe, falls Farben noch nicht geladen werden konnten
         echo -e "\e[31mKRITISCH: Bibliothek nicht gefunden: $lib_path\e[0m" >&2
         exit 1
     fi
@@ -60,8 +60,9 @@ done
 
 # @description Zeigt die Hilfe und Nutzungsinformationen an.
 usage() {
-    echo -e "${UI_ATTR_BOLD:-}${UI_COL_YELLOW:-}Dotfiles Controller${UI_COL_RESET:-} (v1.2.1)"
-    echo -e "Repo Root: ${UI_COL_CYAN:-}${REPO_ROOT}${UI_COL_RESET:-}\n"
+    echo -e "${UI_ATTR_BOLD:-}${UI_COL_YELLOW:-}Dotfiles Controller${UI_COL_RESET:-} (v1.2.2)"
+    echo -e "Location:  ${UI_COL_CYAN:-}${REPO_ROOT}${UI_COL_RESET:-}"
+    echo -e "System-OS: ${UI_COL_MAGENTA:-}$(uname -s)${UI_COL_RESET:-}\n"
     cat <<EOF
 Nutzung: $(basename "$0") BEFEHL [OPTIONEN]
 
@@ -74,7 +75,7 @@ Befehle:
     doctor          Vollständige Diagnose (Health + Symlinks).
 
 Optionen:
-    --dry-run       Simulation: Keine Schreiboperationen (mv, ln, rm) ausführen.
+    --dry-run       Simulation: Keine Schreiboperationen ausführen.
     --strict        Behandelt Warnungen als fatale Fehler (Exit 1).
     --all-users     (Linux) Wendet Aktion auf alle validen Home-Verzeichnisse an.
     --user <name>   (Linux) Spezifischen System-Benutzer ansteuern.
@@ -96,7 +97,7 @@ cmd_install_uninstall() {
         elif [[ -n "$user" ]]; then
             platform_linux_validate_user "$user" && users_to_process+=("$user") || die "User '$user' ungültig."
         else
-            die "Auf Linux ist --all-users oder --user <name> erforderlich (Sicherheitsvorgabe)."
+            die "Auf Linux ist --all-users oder --user <name> erforderlich."
         fi
 
         for u in "${users_to_process[@]}"; do
@@ -108,7 +109,6 @@ cmd_install_uninstall() {
                 if [[ "$action" == "install" ]]; then
                     engine_create_link "${REPO_ROOT}/home/${file}" "${home}/${file}" || ((error_count++))
                 else
-                    # v1.2.1 Fix: Nutzt konsistente engine_remove_link Funktion
                     engine_remove_link "${home}/${file}" || ((error_count++))
                 fi
             done
@@ -193,7 +193,7 @@ cmd_health_checks() {
 
 main() {
     # Default-Werte
-    DRY_RUN=0
+    export DRY_RUN=0
     STRICT_MODE_INTERNAL=0
     TARGET_USER=""
     ALL_USERS=0
@@ -206,7 +206,7 @@ main() {
     # Argument Parsing
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --dry-run)   DRY_RUN=1; shift ;;
+            --dry-run)   export DRY_RUN=1; shift ;;
             --strict)    STRICT_MODE_INTERNAL=1; shift ;;
             --all-users) ALL_USERS=1; shift ;;
             --user)      [[ -z "${2:-}" ]] && die "--user benötigt Namen."; TARGET_USER="$2"; shift 2 ;;
@@ -214,9 +214,6 @@ main() {
             *)           die "Unbekannte Option: $1" ;;
         esac
     done
-
-    # Exportiere Variablen für die Engine (idempotent)
-    export DRY_RUN
 
     # Plattform-Erkennung
     local os="unknown"
@@ -241,8 +238,10 @@ main() {
             cmd_health_checks "$CMD" "$os" "$ALL_USERS" "$TARGET_USER"
             ;;
         update)
-            log_info "Aktualisiere Repository..."
-            [[ "$os" == "linux" ]] && platform_linux_require_root
+            log_info "Aktualisiere Repository in $REPO_ROOT..."
+            if [[ ! -w "$REPO_ROOT" ]]; then
+                die "Keine Schreibrechte in $REPO_ROOT (Update fehlgeschlagen)."
+            fi
             run git -C "$REPO_ROOT" pull --ff-only
             ;;
         *)

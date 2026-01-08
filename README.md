@@ -1,31 +1,32 @@
-# 🛠️ Dotfiles Management System (v1.2.1)
+# 🛠️ Dotfiles Management System (v1.2.2)
 
-Ein hochmodulares, plattformübergreifendes Framework zur Verwaltung von Konfigurationsdateien. Optimiert für maximale Konsistenz zwischen nativen **Linux-Systemen** und **Windows-Umgebungen** (Git Bash / MSYS2).
+Ein hochmodulares, plattformübergreifendes Framework zur Verwaltung von Konfigurationsdateien. Optimiert für maximale Konsistenz zwischen nativen **Linux-Systemen** und **Windows-Umgebungen** (Git Bash / MSYS2). In der Version 1.2.2 für den **zentralen Multi-User-Einsatz** optimiert.
 
 ## 🚀 Highlights
 
+* **Zentrale Verwaltung:** Installation in `/opt/dotfiles` ermöglicht die Steuerung mehrerer Benutzer-Profile von einer Code-Basis aus.
 * **Plattform-Agnostisch:** Einheitliche Logik für Linux und Windows mit automatischer Erkennung zur Laufzeit.
 * **Native Windows Symlinks:** Nutzt `winsymlinks:nativestrict` für echte NTFS-Symlinks statt bloßer Dateikopien.
 * **Modulare Architektur:** Striktes "Separation of Concerns" zwischen Logik-Bibliotheken (`lib/`) und User-Konfiguration (`home/`).
-* **Integrierte Diagnose:** Der `doctor`-Modus validiert Abhängigkeiten, Pfade und kritische Berechtigungen (Symlink-Rechte unter Win).
-* **Sicher & Robust:** Idempotente Operationen und automatisches Backup-Management schützen deine bestehende Konfiguration.
+* **Integrierte Diagnose:** Der `doctor`-Modus validiert Abhängigkeiten, Pfade und kritische Berechtigungen systemweit.
+* **Sicher & Robust:** Idempotente Operationen und konfliktfreier Namespace durch `_VAL`-Suffixe in den Bibliotheken.
 
 ## 📂 Projektstruktur
 
 ```text
-~/.dotfiles/              # Standard-Installationspfad (Repo-Root)
+/opt/dotfiles/            # Zentraler Installationspfad (System-Standard)
 ├── dotfilesctl.sh        # Zentraler Orchestrator (Main Entry Point)
-├── test_suite.sh         # Automatisierte Sandbox-Validierung
-├── lib/                  # Kern-Bibliotheken (v1.2.1)
-│   ├── libcolors.sh      # UI-Farbsequenzen
-│   ├── libconstants.sh   # Globale Variablen & Symbole
+├── test_suite.sh         # Automatisierte Sandbox-Validierung (v1.2.2)
+├── lib/                  # Kern-Bibliotheken (Namespace-gesichert)
+│   ├── libcolors.sh      # Atomare ANSI-Werte (_VAL)
+│   ├── libconstants.sh   # Zusammengesetzte UI-Sequenzen & Whitelists
 │   ├── libplatform_*.sh  # OS-spezifische Abstraktionslayer
 │   └── libengine.sh      # Symlink-, Backup- & Kernlogik
-├── home/                 # Die eigentlichen Dotfiles (~/.*)
+├── home/                 # Die eigentlichen Dotfiles (Templates)
 │   ├── .bashrc           # Haupt-Initialisierung der Shell
 │   ├── .bashenv          # Umgebungsvariablen & Pfade
-│   └── .bashprompt       # Dynamisches Git-Prompt Design
-└── docs/                 # Vertiefende Dokumentation & Guides
+│   └── .bashprompt        # Dynamisches Git-Prompt Design
+└── docs/                 # Vertiefende Dokumentation (v1.2.2 Update)
 
 ```
 
@@ -35,49 +36,52 @@ Ein hochmodulares, plattformübergreifendes Framework zur Verwaltung von Konfigu
 
 * **Bash >= 4.0**
 * **Git**
-* **Windows-Hinweis:** Aktiviere den **Entwicklermodus** (*Einstellungen > Datenschutz & Sicherheit > Für Entwickler*), um Symlinks ohne Administratorrechte erstellen zu können.
+* **Sudo-Rechte:** Erforderlich für die Einrichtung in `/opt` und Multi-User-Operationen.
 
-### Schnellstart
+### Schnellstart (Empfohlen)
 
 ```bash
-# 1. Repository klonen
-git clone https://github.com/stony64/dotfiles-v2.git ~/.dotfiles
-cd ~/.dotfiles
+# 1. Repository zentral klonen
+sudo git clone https://github.com/stony64/dotfiles-v2.git /opt/dotfiles
+sudo chown -R root:root /opt/dotfiles
 
-# 2. System-Integrität prüfen
-./dotfilesctl.sh doctor
+# 2. Globalen Befehl 'dctl' registrieren
+sudo ln -sf /opt/dotfiles/dotfilesctl.sh /usr/local/bin/dctl
+sudo chmod +x /usr/local/bin/dctl
 
-# 3. Installation starten (Simulation empfohlen)
-./dotfilesctl.sh install --dry-run
+# 3. System-Integrität prüfen
+dctl doctor --user root
 
-# 4. Final anwenden
-./dotfilesctl.sh install
+# 4. Installation für einen Benutzer (z.B. root oder stony)
+dctl install --user root
 
 ```
 
 ## 💻 Benutzung
 
-Nach erfolgreicher Installation wird der Alias **`dctl`** global verfügbar gemacht.
+Durch den Symlink in `/usr/local/bin` ist der Befehl **`dctl`** systemweit verfügbar.
 
 | Befehl | Beschreibung |
 | --- | --- |
-| `dctl install` | Erstellt Symlinks & Backups gemäß Whitelist. |
+| `dctl install` | Erstellt Symlinks & Backups (erfordert `--user` oder `--all-users`). |
 | `dctl uninstall` | Entfernt Symlinks sicher und stellt Backups wieder her. |
 | `dctl doctor` | Validiert Tools, Pfade und Symlink-Berechtigungen. |
-| `dctl update` | Aktualisiert das Repo und synchronisiert Änderungen. |
+| `dctl health` | Schneller System-Check der Abhängigkeiten. |
+| `dctl update` | Aktualisiert das zentrale Repo via Git Pull. |
 
 ### Globale Optionen
 
-* `--dry-run`: Zeigt alle geplanten Aktionen an, ohne das Dateisystem zu verändern.
-* `--user <name>`: *(Nur Linux)* Definiert den Zielbenutzer für Multi-User-Systeme.
+* `--dry-run`: Simulation: Zeigt Änderungen an, ohne sie auszuführen.
+* `--user <name>`: Zielbenutzer für die Operation (z.B. `root`, `stony`).
+* `--all-users`: Verarbeitet alle validen Home-Verzeichnisse (nur Linux).
 
 ## 🛡️ Qualitätssicherung
 
-Das Framework verfügt über eine integrierte Test-Suite, die eine temporäre Sandbox erstellt. Hierbei werden verschiedene Betriebssysteme simuliert und die Symlink-Logik validiert, ohne dein echtes `$HOME` zu beeinflussen.
+Das Framework nutzt eine dedizierte Test-Suite, um die Integrität nach Pfadänderungen oder Updates zu gewährleisten.
 
 ```bash
-# Startet die automatisierten Funktionstests
-./test_suite.sh
+# Startet die automatisierten Funktionstests für v1.2.2
+/opt/dotfiles/test_suite.sh
 
 ```
 

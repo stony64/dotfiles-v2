@@ -1,93 +1,89 @@
-# 📜 Bash Styleguide & Coding Standards (v1.2.1)
+# 📜 Bash Styleguide & Coding Standards (v1.2.2)
 
-Dieses Dokument definiert die verbindlichen Standards für die Entwicklung und Erweiterung des Dotfiles-Projekts. Ziel ist maximale Lesbarkeit, Cross-Plattform-Kompatibilität und absolute Robustheit.
+Dieses Dokument definiert die verbindlichen Standards für die Entwicklung und Erweiterung des Dotfiles-Projekts. In der Version 1.2.2 liegt der Fokus auf **Namespace-Sicherheit** (Vermeidung von `readonly`-Fehlern) und **zentraler Systemverwaltung**.
 
 ---
 
 ## 1. Allgemeine Prinzipien
 
-* **Bash Version:** Alle Skripte müssen kompatibel zu **Bash >= 4.0** sein (wegen assoziativer Arrays und `globstar`).
+* **Bash Version:** Alle Skripte müssen kompatibel zu **Bash >= 4.0** sein (wegen assoziativer Arrays und `mapfile`).
 * **Sicherheit:** Jedes ausführbare Skript beginnt mit `set -euo pipefail`.
-* `-e`: Sofortiger Abbruch bei Fehlern.
-* `-u`: Fehler bei Zugriff auf ungesetzte Variablen.
-* `-o pipefail`: Erkennt Fehler innerhalb von Pipelines (nicht nur am Ende).
-
-* **Plattform-Agnostik:** Nutze immer die globale Variable `$PLATFORM` (`linux`|`windows`) für OS-spezifische Pfade oder Logik-Weichen.
+* **Zentraler Pfad:** Das Projekt ist für `/opt/dotfiles` optimiert. Nutze immer die dynamische Pfadauflösung via `REPO_ROOT`, um Portabilität zu gewährleisten.
 
 ## 2. Datei-Struktur & Header
 
-Jedes Skript muss einen standardisierten Header im "Box-Design" besitzen. Bibliotheken (`lib/*.sh`) müssen zudem einen **Include-Guard** besitzen, um mehrfaches Laden zu verhindern.
+Bibliotheken (`lib/*.sh`) müssen einen **Include-Guard** besitzen. Dies ist in v1.2.2 kritisch, da viele Variablen als `readonly` deklariert sind.
 
 ```bash
 #!/usr/bin/env bash
 #
-# FILE: path/to/script.sh
+# FILE: lib/libexample.sh
 # ──────────────────────────────────────────────────────────────
-# KURZE BESCHREIBUNG IN GROSSBUCHSTABEN
-# ──────────────────────────────────────────────────────────────
-# Zweck:       Detaillierte Erläuterung der Aufgabe.
-# Standards:   set -euo pipefail, Bash >= 4.0, Shellcheck compliant.
+# BESCHREIBUNG DER BIBLIOTHEK
 # ──────────────────────────────────────────────────────────────
 
-# Beispiel Include-Guard für Bibliotheken:
+# v1.2.2 Include-Guard
 [[ -n "${_LIB_EXAMPLE_LOADED:-}" ]] && return
 readonly _LIB_EXAMPLE_LOADED=1
 
 ```
 
-## 3. Namenskonventionen
+## 3. Namenskonventionen (v1.2.2 Update)
 
-| Typ | Stil | Beispiel |
-| --- | --- | --- |
-| **Lokale Variablen** | `snake_case` | `local target_path` |
-| **Globale Konstanten** | `SCREAMING_SNAKE` | `readonly BACKUP_DIR` |
-| **UI-Konstanten** | Präfix `UI_` | `UI_COL_RED`, `UI_SYMBOL_OK` |
-| **Funktionen** | `snake_case` | `create_symlink()` |
-| **Umgebungsvariablen** | `SCREAMING_SNAKE` | `export PLATFORM` |
+Um Kollisionen bei `readonly`-Variablen zu vermeiden, nutzen wir eine strikte Trennung zwischen **Rohwerten** und **formatierten UI-Strings**.
 
-## 4. Funktions-Dokumentation (Javadoc-Stil)
+| Typ | Stil | Beispiel | Zweck |
+| --- | --- | --- | --- |
+| **Rohwerte (Werte)** | `UI_*_VAL` | `UI_COL_RED_VAL='31'` | Atomare Werte in `libcolors.sh`. |
+| **UI-Sequenzen** | `UI_*` | `UI_COL_RED='\e[31m'` | Finale ANSI-Strings in `libconstants.sh`. |
+| **Lokale Variablen** | `snake_case` | `local target_path` | Nur innerhalb von Funktionen. |
+| **Globale Konstanten** | `SCREAMING_SNAKE` | `readonly REPO_ROOT` | Systemweite Konstanten. |
+| **Funktionen** | `snake_case` | `engine_create_link()` | Mit Modul-Präfix (z.B. `engine_`). |
 
-Jede Funktion muss unmittelbar vor ihrer Definition dokumentiert werden. Dies erleichtert die Wartung und ermöglicht automatische Dokumentationsgenerierung.
+## 4. Namespace-Sicherheit (WICHTIG)
+
+In v1.2.2 ist es untersagt, Variablen in verschiedenen Bibliotheken mit demselben Namen als `readonly` zu definieren.
+
+* **Regel:** `libcolors.sh` definiert nur Werte mit dem Suffix `_VAL`.
+* **Regel:** `libconstants.sh` setzt diese zu den finalen UI-Variablen zusammen.
+
+## 5. Funktions-Dokumentation (Javadoc-Stil)
+
+Jede Funktion muss dokumentiert sein. Das Präfix sollte dem Dateinamen entsprechen (Modul-Design).
 
 ```bash
-# @description Kurze Beschreibung der Aufgabe.
-# @param $1 [String] Zielpfad für den Symlink.
-# @param $2 [String] Quellpfad (optional).
-# @stdout Feedback-Meldung für den User.
-# @return 0 bei Erfolg, 1 bei ungültigen Pfaden.
-create_symlink() {
-    local target="${1:-}"
-    local source="${2:-}"
+# @description Erstellt einen Symlink mit Backup-Logik.
+# @param $1 [String] Quellpfad (im Repo).
+# @param $2 [String] Zielpfad (im Home).
+# @return 0 bei Erfolg, EXIT_FATAL bei Fehlern.
+engine_create_link() {
+    local source="${1:-}"
+    local target="${2:-}"
     # Logik ...
 }
 
 ```
 
-## 5. UI & Ausgaben
+## 6. Multi-User & Pfad-Handling
 
-Nutze für alle Ausgaben die vordefinierten Farbcodes und Symbole aus `libcolors.sh` und `libconstants.sh`.
+Da das System nun in `/opt/dotfiles` lebt, gelten verschärfte Regeln für Pfade:
 
-* **Erfolg:** `${UI_COL_GREEN}${UI_SYMBOL_OK}${UI_COL_RESET}`
-* **Fehler:** `${UI_COL_RED}${UI_SYMBOL_ERROR}${UI_COL_RESET}` (Ausgabe immer auf `stderr` via `>&2`).
-* **Pfade:** Pfade in Ausgaben immer in Anführungszeichen setzen `"..."`, um Leerzeichen-Probleme sofort sichtbar zu machen.
+1. **Dynamischer Root:** Nutze die v1.2.2 `while`-Schleife mit `readlink`, um den `REPO_ROOT` zu finden (folgt Symlinks von `/usr/local/bin`).
+2. **User-Kontext:** Nutze niemals `$HOME` hartcodiert, wenn das Skript für andere User (`--user <name>`) agiert. Verwende stattdesssen die vom Controller ermittelte lokale Variable `home`.
+3. **Quoting:** **Jede** Variable in Pfaden **muss** in `"..."` stehen.
 
-## 6. Cross-Plattform Best Practices
+## 7. UI & Ausgaben
 
-Da das Projekt native Windows-Symlinks unterstützt, gelten folgende Regeln:
+Nutze die Präfixe aus `libconstants.sh` für konsistentes Logging:
 
-1. **Pfad-Handling:** Nutze `$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)`, um das Skript-Verzeichnis robust zu ermitteln.
-2. **Quoting:** **Jede** Variable, die einen Pfad enthält, muss in doppelten Anführungszeichen stehen: `"$path"`.
-3. **Typprüfung:** Nutze spezifische Flags für Tests:
+* `log_info "Nachricht"` -> `${LOG_PREFIX_INFO} Nachricht`
+* `log_error "Nachricht"` -> `${LOG_PREFIX_ERROR} Nachricht` (geht autom. auf `stderr`)
 
-* `[[ -L "$path" ]]` prüft auf (Sym-)Links.
-* `[[ -f "$path" ]]` prüft auf echte Dateien.
-* `[[ -e "$path" ]]` prüft auf allgemeine Existenz.
+## 8. Statische Analyse (Shellcheck)
 
-## 7. Statische Analyse (Shellcheck)
-
-Jedes Skript muss `shellcheck`-clean sein. Lokale Ausnahmen sind selten und müssen begründet werden.
-
-* **Sourcing:** Dynamisches Sourcing (Variablen im Pfad) erfordert `# shellcheck disable=SC1090`.
-* **Lokale Variablen:** Nutze immer `local` innerhalb von Funktionen, um den globalen Namespace sauber zu halten.
+* Jedes Skript muss `shellcheck`-clean sein.
+* Nutze `readonly` für alle globalen Variablen, die nach der Initialisierung nicht mehr geändert werden.
+* Nutze `local` für **alle** Variablen innerhalb von Funktionen.
 
 ---
+

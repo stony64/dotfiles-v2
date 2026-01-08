@@ -1,6 +1,6 @@
 # ┌───────────────────────────────────────────────────────────────────────────┐
 # │ FILE: .github/workflows/release.yml                                       │
-# │ ZWECK: Automatisierte Validierung und Veröffentlichung (v1.2.1)           │
+# │ ZWECK: Automatisierte Validierung und Veröffentlichung (v1.2.2)            │
 # │ FLOW: Trigger auf v*-Tags -> ShellCheck -> Sandbox Tests -> Release       │
 # └───────────────────────────────────────────────────────────────────────────┘
 
@@ -16,7 +16,7 @@ jobs:
   # 1. VALIDIERUNG (Quality Gate)
   # ──────────────────────────────────────────────────────────────
   test:
-    name: Validate Scripts
+    name: Validate Scripts & Logic
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Repository
@@ -25,16 +25,19 @@ jobs:
       - name: 🔍 ShellCheck (Static Analysis)
         uses: ludeeus/action-shellcheck@master
         with:
-          # Scannt das Root-Verzeichnis und deine Bibliotheken (lib/)
+          # Scannt das Root-Verzeichnis und alle Bibliotheken (lib/)
           scandir: '.'
-          # Nutzt deine .shellcheckrc für projektspezifische Ausnahmen
+          # Nutzt die .shellcheckrc für projektspezifische Ausnahmen (z.B. SC1090)
           ignore: 'node_modules'
 
       - name: 🧪 Run Test Suite (Functional Sandbox)
         run: |
           # Erzwinge Ausführungsrechte für die CI-Umgebung
           chmod +x dotfilesctl.sh test_suite.sh lib/*.sh
-          # Führt die funktionale Validierung aus
+
+          # Simulation der v1.2.2 Struktur:
+          # Wir führen die Test-Suite direkt im Workspace aus.
+          # Die Suite validiert die neue Pfad-Logik (REPO_ROOT Ermittlung).
           ./test_suite.sh
 
   # ──────────────────────────────────────────────────────────────
@@ -45,7 +48,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Erforderlich zum Erstellen von Releases
+      contents: write # Erforderlich zum Erstellen von Releases und Tags
 
     steps:
       - name: 📥 Checkout Repository
@@ -59,19 +62,25 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: |
-            ## 🛠 Dotfiles Framework v1.2.1
+            ## 🛠 Dotfiles Framework v1.2.2 (Stable)
 
-            Dieses Release markiert den stabilen Meilenstein der modularen Architektur.
-            Optimiert für **Linux (Ubuntu/Debian)** und **Windows (Git Bash/MSYS2)**.
+            Dieses Release markiert den Übergang zur **zentralisierten Multi-User-Architektur**.
+            Optimiert für den Einsatz unter **/opt/dotfiles** mit systemweitem Zugriff.
 
-            ### ✨ Highlights dieses Releases:
-            - **Modulare Engine:** Klare Trennung von Logik (`lib/`) und Konfiguration (`home/`).
-            - **Plattform-Agnostik:** Intelligente Pfad- und Symlink-Behandlung für NTFS/Unix.
-            - **Quality Assurance:** Integrierte ShellCheck-Validierung und Sandbox-Tests.
-            - **Dotfiles Control:** Erweiterter `doctor`-Befehl für Integritätsprüfung.
+            ### ✨ Highlights in v1.2.2:
+            - **Zentralisierung:** Framework-Kern für den Betrieb in `/opt/dotfiles` optimiert.
+            - **Multi-User Support:** Neue Steuerung via `--user <name>` oder `--all-users`.
+            - **Global CLI:** Vorbereitet für den systemweiten Aufruf via `dctl`.
+            - **Namespace Protection:** Implementierung von `_VAL`-Suffixen zur Vermeidung von `readonly`-Kollisionen.
+            - **Robust Path Finding:** Verbesserte Pfadauflösung, die Symlinks (readlink) zuverlässig folgt.
+
+            ### 📦 Installation (Kurzform):
+            1. `sudo git clone <url> /opt/dotfiles`
+            2. `sudo ln -sf /opt/dotfiles/dotfilesctl.sh /usr/local/bin/dctl`
+            3. `sudo dctl install --user $USER`
 
             ---
-            *Automatisches Release generiert durch GitHub Actions.*
+            *Automatisches Release generiert durch GitHub Actions (v1.2.2 Workflow).*
           generate_release_notes: true
           draft: false
           prerelease: false
