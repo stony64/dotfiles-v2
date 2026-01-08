@@ -14,13 +14,13 @@ on:
     paths:
       - '**/*.md'
       - '.markdownlint*'
-      - 'markdownlint-cli2.jsonc'
+      - '.markdownlint-cli2.jsonc'
   pull_request:
     branches: [ main, master ]
     paths:
       - '**/*.md'
       - '.markdownlint*'
-      - 'markdownlint-cli2.jsonc'
+      - '.markdownlint-cli2.jsonc'
 
 jobs:
   markdownlint:
@@ -36,4 +36,4 @@ jobs:
         with:
           # Verweist explizit auf deine zentrale Konfigurationsdatei.
           # Die Action erkennt die Globs und Ignores automatisch daraus.
-          config: "markdownlint-cli2.jsonc"
+          config: ".markdownlint-cli2.jsonc"
