@@ -17,7 +17,7 @@ Ein hochmodulares, plattformübergreifendes Framework zur Verwaltung von Konfigu
 ├── dotfilesctl.sh        # Zentraler Orchestrator (Main Entry Point)
 ├── test_suite.sh         # Automatisierte Sandbox-Validierung
 ├── lib/                  # Kern-Bibliotheken (v1.2.1)
-│   ├── libcolors.sh      # UI-Farbequenzen
+│   ├── libcolors.sh      # UI-Farbsequenzen
 │   ├── libconstants.sh   # Globale Variablen & Symbole
 │   ├── libplatform_*.sh  # OS-spezifische Abstraktionslayer
 │   └── libengine.sh      # Symlink-, Backup- & Kernlogik

@@ -105,6 +105,7 @@
   // 6. SPELLCHECKER (CSPELL) & PROJEKT-GLOSSAR
   // ──────────────────────────────────────────────────────────────
   "cSpell.words": [
+    "Abstraktionslayer",
     "Assemblierung",
     "auxf",
     "bashenv",
@@ -114,12 +115,16 @@
     "dircolors",
     "dotfilesctl",
     "Entf",
+    "Havariefall",
     "ifconfig",
     "libcolors",
     "libengine",
     "nanorc",
+    "nosession",
+    "notabbar",
+    "pfad",
     "upath",
     "Verknüpfungs",
     "Wrappern"
-  ]
+]
 }

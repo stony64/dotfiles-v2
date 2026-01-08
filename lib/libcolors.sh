@@ -29,14 +29,14 @@ readonly UI_ATTR_HIDDEN='8'
 
 # @section Vordergrund-Farben
 # Standard-Farbpalette (30-37)
-readonly UI_COL_BLACK='30'
-readonly UI_COL_RED='31'
-readonly UI_COL_GREEN='32'
-readonly UI_COL_YELLOW='33'
-readonly UI_COL_BLUE='34'
-readonly UI_COL_MAGENTA='35'
-readonly UI_COL_CYAN='36'
-readonly UI_COL_WHITE='37'
+readonly UI_VAL_BLACK='30'
+readonly UI_VAL_RED='31'
+readonly UI_VAL_GREEN='32'
+readonly UI_VAL_YELLOW='33'
+readonly UI_VAL_BLUE='34'
+readonly UI_VAL_MAGENTA='35'
+readonly UI_VAL_CYAN='36'
+readonly UI_VAL_WHITE='37'
 
 # @section Hintergrund-Farben
 # Hintergrund-Palette (40-47) für Statuszeilen und Header
