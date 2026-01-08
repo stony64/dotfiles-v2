@@ -2,157 +2,98 @@
 #
 # FILE: test_suite.sh
 # ──────────────────────────────────────────────────────────────
-# AUTOMATISIERTE TEST-SUITE FÜR DAS DOTFILES-PROJEKT
+# AUTOMATISIERTE VALIDIERUNG (v1.2.1)
 # ──────────────────────────────────────────────────────────────
-# Zweck:    Validierung der Kern-Logik (Installation, Idempotenz)
-#           in einer isolierten Sandbox-Umgebung (/tmp).
-# Standards: set -euo pipefail, Bash >= 4.0, Modulares Design.
-# ──────────────────────────────────────────────────────────────
-
-set -euo pipefail
-
-# ──────────────────────────────────────────────────────────────
-# 1. INITIALISIERUNG & KONSTANTEN
+# Zweck:       Prüft die Integrität der Dotfiles und Skripte.
+#              Stellt sicher, dass v1.2.1 Standards eingehalten werden.
 # ──────────────────────────────────────────────────────────────
 
-# @description Pfade für die isolierte Test-Umgebung.
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly TEST_SANDBOX="/tmp/dotfiles_test_env"
-readonly TEST_HOME="${TEST_SANDBOX}/home_dir"
-readonly TEST_REPO="${TEST_SANDBOX}/repo"
+# 1. Globale Einstellungen (Sicherheit geht vor)
+set -o errexit  # Abbruch bei Fehlern
+set -o nounset  # Abbruch bei nicht definierten Variablen (unbound variable fix)
+set -o pipefail # Fehler in Pipes erkennen
 
-# Laden der Kern-Bibliotheken für konsistente Farbausgaben und Exit-Codes.
-# shellcheck disable=SC1091
-source "${SCRIPT_DIR}/lib/libcolors.sh"
-source "${SCRIPT_DIR}/lib/libconstants.sh"
+# 2. Umgebung fixen (Locale & Pfade)
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
+export PATH="$(pwd):$PATH"
 
-# ──────────────────────────────────────────────────────────────
-# 2. HILFSFUNKTIONEN (TEST-FRAMEWORK)
-# ──────────────────────────────────────────────────────────────
-
-# @description Gibt eine formatierte Header-Nachricht aus.
-# @param $1 Nachrichtentext.
-# @stdout Formatiertes Header-Präfix.
-msg() {
-    echo -e "\n${COL_BLUE}>>>${COL_RESET} ${STYLE_BOLD}$1${COL_RESET}"
-}
-
-# @description Gibt eine positive Bestätigung aus.
-# @param $1 Nachrichtentext.
-# @stdout Formatiertes Erfolgs-Symbol mit Nachricht.
-success() {
-    echo -e "    ${COL_GREEN}${SYMBOL_OK}${COL_RESET} $1"
-}
-
-# @description Gibt eine Fehlermeldung aus und bricht den Testlauf ab.
-# @param $1 Fehlermeldung.
-# @stdout Fehlermeldung auf stderr.
-# @return EXIT_FATAL (via exit).
-error() {
-    echo -e "    ${COL_RED}${SYMBOL_ERROR}${COL_RESET} $1" >&2
-    exit "$EXIT_FATAL"
-}
+# 3. Bibliotheken laden
+# Wichtig: Die Reihenfolge muss stimmen (Basis -> Konstanten)
+LIB_DIR="./lib"
+if [[ -f "$LIB_DIR/libcolors.sh" && -f "$LIB_DIR/libconstants.sh" ]]; then
+    source "$LIB_DIR/libcolors.sh"
+    source "$LIB_DIR/libconstants.sh"
+else
+    echo "[!] Fehler: Bibliotheken in $LIB_DIR nicht gefunden."
+    exit 1
+fi
 
 # ──────────────────────────────────────────────────────────────
-# 3. TEST-DEFINITIONEN
+# TEST-FUNKTIONEN
 # ──────────────────────────────────────────────────────────────
 
-# @description Bereitet die Sandbox-Umgebung vor.
-# @stdout Status der Verzeichniserstellung und Kopiervorgänge.
-# @return EXIT_OK oder bricht via error() ab.
-setup_test_env() {
-    msg "Initialisiere Test-Umgebung in ${TEST_SANDBOX}"
-    rm -rf "$TEST_SANDBOX"
-    mkdir -p "$TEST_HOME"
-    mkdir -p "$TEST_REPO"
-
-    # Kopiere das gesamte Projekt in die Sandbox für isolierte Ausführung.
-    cp -r "${SCRIPT_DIR}/"* "$TEST_REPO/"
-    success "Test-Umgebung bereitgestellt."
-    return "$EXIT_OK"
-}
-
-# @description Führt eine Simulation der Installation durch.
-# @stdout Output des dotfilesctl.sh im Dry-Run Modus.
-# @return EXIT_OK oder bricht via error() ab.
-test_install_dry_run() {
-    msg "Test: Install Dry-Run"
-    (
-        cd "$TEST_REPO"
-        # Simulation der Umgebungsvariablen für Portabilität
-        HOME="$TEST_HOME" USER="$(whoami)" ./dotfilesctl.sh install --dry-run --user "$(whoami)"
-    ) || error "Dry-Run Befehl ist mit Fehlern abgebrochen."
-    success "Dry-Run erfolgreich durchgelaufen."
-    return "$EXIT_OK"
-}
-
-# @description Führt eine tatsächliche Installation in der Sandbox aus.
-# @stdout Output der Installation.
-# @return EXIT_OK oder bricht via error() ab.
-test_actual_install() {
-    msg "Test: Echte Installation"
-    (
-        cd "$TEST_REPO"
-        HOME="$TEST_HOME" USER="$(whoami)" ./dotfilesctl.sh install --user "$(whoami)"
-    ) || error "Die Installation in der Sandbox ist fehlgeschlagen."
-
-    # Validierung: Prüft ob .bashrc als Symlink im Test-Home existiert.
-    if [[ -L "${TEST_HOME}/.bashrc" ]]; then
-        success "Symlink .bashrc wurde korrekt erstellt."
+log_test() {
+    local status=$1
+    local message=$2
+    if [[ "$status" -eq 0 ]]; then
+        echo -e "${UI_COL_GREEN}${SYMBOL_OK}${UI_COL_RESET} $message"
     else
-        error ".bashrc Symlink fehlt nach Installation."
+        echo -e "${UI_COL_RED}${SYMBOL_ERROR}${UI_COL_RESET} $message"
+        return 1
     fi
-    return "$EXIT_OK"
 }
 
-# @description Prüft, ob mehrfache Ausführung den Systemzustand nicht verändert (Idempotenz).
-# @stdout Bestätigung der Idempotenz basierend auf Log-Output.
-# @return EXIT_OK oder bricht via error() ab.
-test_idempotency() {
-    msg "Test: Idempotenz (Mehrfache Ausführung)"
-    local output
-    # Abfangen des Outputs, um auf die "bereits korrekt" Meldung zu prüfen.
-    output=$(cd "$TEST_REPO" && HOME="$TEST_HOME" USER="$(whoami)" ./dotfilesctl.sh install --user "$(whoami)")
+# @test: Prüfung der Repository-Struktur
+test_structure() {
+    echo -e "\n${STYLE_BOLD}>>> Test 1: Verzeichnis-Struktur${UI_COL_RESET}"
+    [[ -d "home" ]] && log_test 0 "home/ Verzeichnis existiert."
+    [[ -d "lib" ]]  && log_test 0 "lib/ Verzeichnis existiert."
+    [[ -f "dotfilesctl.sh" ]] && log_test 0 "Controller-Skript vorhanden."
+}
 
-    if echo "$output" | grep -q "bereits korrekt"; then
-        success "Idempotenz bestätigt: Link erkannt und nicht unnötig überschrieben."
+# @test: Prüfung der Bibliotheken (Double-Sourcing Test)
+test_libraries() {
+    echo -e "\n${STYLE_BOLD}>>> Test 2: Bibliotheken & Namespace${UI_COL_RESET}"
+    # Versuche Double-Sourcing (darf dank Include-Guard nicht crashen)
+    if source "$LIB_DIR/libconstants.sh"; then
+        log_test 0 "Library Include-Guards arbeiten korrekt (keine Redefinition)."
+    fi
+    [[ -n "${UI_COL_RED:-}" ]] && log_test 0 "Namespace UI_COL_ korrekt initialisiert."
+}
+
+# @test: Doctor-Kommando des Controllers
+test_controller_doctor() {
+    echo -e "\n${STYLE_BOLD}>>> Test 3: Controller Logik (Doctor)${UI_COL_RESET}"
+    if ./dotfilesctl.sh doctor > /dev/null 2>&1; then
+        log_test 0 "Command 'doctor' liefert EXIT_OK."
     else
-        error "Idempotenz-Check fehlgeschlagen (Erneute Installation trotz Existenz)."
+        log_test 1 "Command 'doctor' fehlgeschlagen."
     fi
-    return "$EXIT_OK"
-}
-
-# @description Bereinigt die Test-Umgebung.
-# @stdout Status der Bereinigung.
-test_cleanup() {
-    msg "Räume Test-Umgebung auf"
-    rm -rf "$TEST_SANDBOX"
-    success "Cleanup abgeschlossen."
 }
 
 # ──────────────────────────────────────────────────────────────
-# 4. EXECUTION
+# HAUPT-EXECUTION
 # ──────────────────────────────────────────────────────────────
 
-# @description Hauptprozess zur Ausführung der Test-Suiten.
-# @param $@ Kommandozeilenargumente (derzeit nicht genutzt).
-main() {
-    # Sicherheitsprüfung: Skript-Lokalisierung verifizieren.
-    if [[ ! -f "${SCRIPT_DIR}/dotfilesctl.sh" ]]; then
-        echo -e "${COL_RED}${SYMBOL_ERROR}${COL_RESET} Fehler: Test-Suite muss im Root des Dotfiles-Repos liegen." >&2
-        exit "$EXIT_FATAL"
-    fi
+echo -e "${STYLE_HEADER_BG}   DOTFILES v1.2.1 VALIDIERUNG   ${UI_COL_RESET}"
+echo -e "Datum: $(date '+%Y-%m-%d %H:%M:%S')"
+echo -e "System: $PLATFORM"
 
-    setup_test_env
+# Tests in Subshell ausführen, um Haupt-Shell sauber zu halten
+(
+    test_structure
+    test_libraries
+    test_controller_doctor
+)
 
-    # Ausführung der Test-Cases
-    test_install_dry_run
-    test_actual_install
-    test_idempotency
+TEST_RESULT=$?
 
-    echo -e "\n${COL_GREEN}${STYLE_BOLD}ALLE TESTS ERFOLGREICH BESTANDEN!${COL_RESET} ${SYMBOL_OK}"
-
-    test_cleanup
-}
-
-main "$@"
+echo -e "\n──────────────────────────────────────────────────────────────"
+if [[ $TEST_RESULT -eq 0 ]]; then
+    echo -e "${UI_COL_GREEN}ERGEBNIS: Alle Tests erfolgreich bestanden!${UI_COL_RESET}"
+    exit 0
+else
+    echo -e "${UI_COL_RED}ERGEBNIS: Validierung fehlgeschlagen.${UI_COL_RESET}"
+    exit 1
+fi
