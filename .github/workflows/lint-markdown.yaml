@@ -1,16 +1,15 @@
-# FILE: .github/workflows/lint-markdown.yml
-# ──────────────────────────────────────────────────────────────
-# GITHUB ACTION: MARKDOWN LINTING (v1.2.1)
-# ──────────────────────────────────────────────────────────────
-# Zweck:       Automatische Prüfung der Dokumentation bei Pushes
-#              und Pull Requests auf Basis deiner Linter-Regeln.
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: .github/workflows/lint-markdown.yml                                 │
+# │ ZWECK: GitHub Action zur automatisierten Dokumentations-Prüfung           │
+# │ STANDARDS: v1.2.1, CI/CD Best Practices, Ressourcen-schonend              │
+# └───────────────────────────────────────────────────────────────────────────┘
 
 name: Lint Markdown
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, 'release/**' ]
+    # Trigger nur bei Änderungen an MD-Dateien oder der Linter-Konfiguration
     paths:
       - '**/*.md'
       - '.markdownlint*'
@@ -21,6 +20,8 @@ on:
       - '**/*.md'
       - '.markdownlint*'
       - '.markdownlint-cli2.jsonc'
+  # Erlaubt den manuellen Start über das GitHub Actions Tab
+  workflow_dispatch:
 
 jobs:
   markdownlint:
@@ -28,12 +29,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Run Markdownlint-cli2
+      - name: 🔍 Run Markdownlint-cli2
         uses: DavidAnson/markdownlint-cli2-action@v16
         with:
-          # Verweist explizit auf deine zentrale Konfigurationsdatei.
-          # Die Action erkennt die Globs und Ignores automatisch daraus.
+          # Nutzt deine v1.2.1 Konfiguration für absolute Konsistenz
           config: ".markdownlint-cli2.jsonc"
+          # Optional: Gibt Fehlermeldungen direkt als Annotationen in den PR-Codezeilen aus
+          globs: "**/*.md"
+
+      - name: ✅ Success Summary
+        if: success()
+        run: echo "Markdown linting completed successfully."

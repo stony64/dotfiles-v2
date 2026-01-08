@@ -1,28 +1,29 @@
-# Installationsanleitung (v1.2.1)
+# 📖 Installationsanleitung (v1.2.1)
 
-Diese Anleitung beschreibt die saubere Einrichtung des Dotfiles-Systems auf Linux und Windows.
+Diese Anleitung führt Sie durch die saubere Einrichtung des Dotfiles-Systems auf **Linux** und **Windows**.
 
 ## 📋 1. Voraussetzungen
 
 ### Global
 
 * **Bash:** Version 4.0 oder höher erforderlich (`bash --version`).
-* **Git:** Erforderlich für Updates und Repository-Management.
+* **Git:** Installiert und im Pfad (`git --version`).
 
-### Windows (Git Bash / MSYS2)
+### Windows-spezifisch (Git Bash / MSYS2)
 
-Das System nutzt native NTFS-Symlinks. Damit dies ohne Administratorrechte funktioniert:
+Das System nutzt **native NTFS-Symlinks**. Damit diese ohne Administratorrechte erstellt werden können, ist eine einmalige Konfiguration erforderlich:
 
 1. **Entwicklermodus aktivieren:** `Einstellungen -> Datenschutz und Sicherheit -> Für Entwickler -> Entwicklermodus: EIN`.
-2. **Umgebung:** Starte die Git Bash nach Aktivierung des Entwicklermodus neu.
+2. **Umgebung:** Starten Sie die Git Bash nach der Aktivierung einmal neu.
+3. **Hintergrund:** Dies erlaubt der Bash, den Befehl `ln -s` auf NTFS-Dateisysteme zu mappen, was für die Konsistenz zwischen Windows und Linux entscheidend ist.
 
 ---
 
-## 🛠️ 2. Installation
+## 🛠️ 2. Durchführung der Installation
 
 ### Schritt A: Repository klonen
 
-Klonen Sie das Repository direkt in den Zielordner:
+Klonen Sie das Framework in das empfohlene Verzeichnis `.dotfiles` in Ihrem Home-Ordner:
 
 ```bash
 git clone https://github.com/stony64/dotfiles-v2.git ~/.dotfiles
@@ -30,67 +31,67 @@ cd ~/.dotfiles
 
 ```
 
-### Schritt B: Systemdiagnose
+### Schritt B: Systemdiagnose (Doctor-Mode)
 
-Bevor Änderungen vorgenommen werden, prüft der „Doctor“ die Schreibrechte und Tools:
+Bevor Änderungen am Dateisystem vorgenommen werden, führt der integrierte Diagnose-Modus eine Prüfung aller Abhängigkeiten und Berechtigungen durch:
 
 ```bash
 ./dotfilesctl.sh doctor
 
 ```
 
+> **Senior-Tipp:** Achten Sie besonders auf die Meldung zu den Symlink-Rechten unter Windows. Ein `[FAIL]` an dieser Stelle bedeutet meist, dass der Entwicklermodus noch deaktiviert ist.
+
 ### Schritt C: Installation ausführen
 
-Wenn die Diagnose grün ist (Symbol: `[OK]`), führen Sie die Installation aus. Wir empfehlen den `--dry-run` Modus für den ersten Testlauf:
+Sobald die Diagnose grün ist (`[OK]`), starten wir die Installation. Nutzen Sie den `--dry-run` Modus, um die geplanten Verknüpfungen vorab zu validieren:
 
 ```bash
-# Optional: Simulation starten
+# 1. Simulation (keine Änderungen am Dateisystem)
 ./dotfilesctl.sh install --dry-run
 
-# Reale Installation
+# 2. Reale Installation (erstellt Symlinks und Backups)
 ./dotfilesctl.sh install
 
 ```
 
 ---
 
-## 🧪 3. Verifizierung
+## 🧪 3. Verifizierung & Aktivierung
 
-Um die neue Umgebung zu aktivieren und zu testen:
+Um die neue Konfiguration sofort wirksam zu machen, ohne das Terminal neu zu starten:
 
 1. **Shell neu laden:** `source ~/.bashrc`
-2. **Prompt-Test:** Navigiere in ein Git-Verzeichnis – der Branch-Name sollte farbig erscheinen.
-3. **Alias-Test:** Tippe `dctl doctor` – der Alias für den Controller muss sofort funktionieren.
+2. **Alias-Check:** Geben Sie `dctl` ein. Wenn die Hilfe des Controllers erscheint, ist der Pfad korrekt gesetzt.
+3. **Git-Prompt Check:** Navigieren Sie in ein beliebiges Git-Repository. Der Prompt sollte nun automatisch den aktuellen Branch in Gelb anzeigen.
 
 ---
 
 ## ⚠️ 4. Problemlösung (Troubleshooting)
 
-### Fehler: "Operation not permitted" (Windows)
+| Problem | Ursache | Lösung |
+| --- | --- | --- |
+| **"Operation not permitted"** | Windows Symlink-Rechte fehlen. | Entwicklermodus in Windows-Einstellungen aktivieren. |
+| **"SKIP: Destination exists"** | Eine echte Datei blockiert den Link. | Benennen Sie die existierende Datei manuell in `.bak` um. |
+| **Prompt sieht "kaputt" aus** | Terminal unterstützt kein ANSI/Farbe. | Nutzen Sie ein modernes Terminal (Windows Terminal, Alacritty, iTerm2). |
 
-* **Ursache:** Fehlende Berechtigung für native Symlinks.
-* **Lösung:** Entwicklermodus aktivieren (siehe Punkt 1). Falls es weiterhin scheitert, prüfen Sie mit `echo $MSYS`, ob `winsymlinks:nativestrict` gesetzt ist.
+### 💡 Best Practice: Lokale Anpassungen
 
-### Fehler: Konflikte mit existierenden Dateien
-
-* **Verhalten:** Die Engine überschreibt niemals "echte" Dateien ohne Backup.
-* **Lösung:** Wenn die Engine meldet `SKIP: Ziel existiert bereits`, benenne deine alte Datei manuell um oder lösche sie, falls sie nicht mehr benötigt wird.
-
-### Best Practice: Lokale Anpassungen
-
-Nutze die Datei `~/.bashrc_local` für Einstellungen, die **nicht** in das öffentliche Git-Repository gehören (z. B. private Aliase oder spezifische Exporte). Diese Datei wird automatisch von der `.bashrc` geladen, falls sie existiert.
+Bearbeiten Sie **niemals** die Dateien im Repository für private Geheimnisse (z. B. API-Keys). Nutzen Sie stattdessen:
+`touch ~/.bashrc_local`
+Diese Datei wird von der `.bashrc` ignoriert (siehe `.gitignore`), aber automatisch geladen, falls sie existiert.
 
 ---
 
 ## 🔄 5. Deinstallation
 
-Das System kann jederzeit rückstandslos entfernt werden:
+Falls Sie das System entfernen möchten, stellt der Controller den Ursprungszustand weitestgehend wieder her:
 
 ```bash
 ./dotfilesctl.sh uninstall
 
 ```
 
-*Hinweis: Erstellte Backups (`.bak`) werden zur Sicherheit nicht automatisch gelöscht.*
+*Hinweis: Zur Sicherheit werden existierende Backups (`.bak`) nicht automatisch gelöscht, sondern müssen bei Bedarf manuell bereinigt werden.*
 
 ---

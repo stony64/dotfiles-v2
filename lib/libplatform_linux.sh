@@ -1,49 +1,59 @@
 #!/usr/bin/env bash
 #
-# FILE: lib/libplatform_linux.sh
-# ──────────────────────────────────────────────────────────────
-# LINUX-SPEZIFISCHE IMPLEMENTIERUNGEN (v1.2.1)
-# ──────────────────────────────────────────────────────────────
-# Zweck:     Benutzerverwaltung und Root-Validierung für Linux.
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: lib/libplatform_linux.sh                                            │
+# │ ZWECK: Linux-spezifische Benutzerverwaltung und System-Validierung        │
+# │ STANDARDS: set -euo pipefail, Bash >= 4.0, Google Shell Style Guide       │
+# └───────────────────────────────────────────────────────────────────────────┘
 
-# 1. INCLUDE GUARD
+# INCLUDE GUARD
 [[ -n "${_LIB_PLATFORM_LINUX_LOADED:-}" ]] && return
 readonly _LIB_PLATFORM_LINUX_LOADED=1
 
 # @description Initialisiert Linux-spezifische Anforderungen.
+# Prüft auf Verfügbarkeit essentieller System-Tools.
+# @return EXIT_OK oder bricht via die() ab.
 platform_linux_init() {
-    # Validierung der für die Benutzerauflösung kritischen Tools
     require_cmd getent
     require_cmd id
-    return "$EXIT_OK"
+    return "${EXIT_OK:-0}"
 }
 
 # @description Erzwingt Root-Rechte für administrative Aufgaben.
+# Verwendet die effektive User-ID (EUID) für maximale Sicherheit.
+# @return EXIT_OK oder bricht via die() ab.
 platform_linux_require_root() {
-    if [[ "$EUID" -ne 0 ]]; then
-        # Nutzt die() aus libcommon.sh, die nun UI_COL_RED nutzt
-        die "Dieses Kommando erfordert Root-Rechte (sudo)."
+    if [[ "${EUID}" -ne 0 ]]; then
+        die "Sicherheitsstopp: Diese Aktion erfordert administrative Privilegien (sudo)."
     fi
-    return "$EXIT_OK"
+    return "${EXIT_OK:-0}"
 }
 
-# @description Identifiziert relevante Benutzer für die Installation.
-# Filterkriterien: UID 0, UIDs >= 1000, Ausschluss UID 65534.
+# @description Identifiziert relevante Benutzer für die Dotfiles-Verteilung.
+# Filtert nach Standard-Linux-Konventionen (Root + Human Users).
+# @return Liste der Benutzernamen auf stdout.
 platform_linux_list_target_users() {
-    # Nutzt getent für Kompatibilität mit LDAP/AD-Benutzern
+    # Filter-Logik:
+    # UID 0 (root)
+    # UIDs >= 1000 (normale Benutzer)
+    # Ausschluss von 65534 (nobody/nfsnobaody)
     getent passwd | awk -F: '($3 == 0 || ($3 >= 1000 && $3 != 65534)) {print $1}'
-    return "$EXIT_OK"
+    return "${EXIT_OK:-0}"
 }
 
-# @description Prüft, ob ein spezifischer Benutzer im System existiert.
+# @description Validiert die Existenz eines spezifischen Benutzers.
+# @param $1 Benutzername.
+# @return EXIT_OK oder EXIT_FATAL.
 platform_linux_validate_user() {
-    local user="$1"
+    local user="${1:-}"
+
+    [[ -z "$user" ]] && return "${EXIT_FATAL:-1}"
 
     if getent passwd "$user" >/dev/null 2>&1; then
-        return "$EXIT_OK"
+        return "${EXIT_OK:-0}"
     else
-        return "$EXIT_FATAL"
+        log_error "Benutzer-Validierung fehlgeschlagen: '$user' nicht gefunden."
+        return "${EXIT_FATAL:-1}"
     fi
 }
 

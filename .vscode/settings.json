@@ -1,30 +1,33 @@
 {
-  // FILE: .vscode/settings.json
-  // ──────────────────────────────────────────────────────────────
-  // VS CODE WORKSPACE SETTINGS (v1.2.1)
-  // ──────────────────────────────────────────────────────────────
-  // Zweck:       Synchronisiert Editor-Verhalten mit Projektstandards.
-  // Kompatibilität: .editorconfig, .markdownlint.jsonc, .shellcheckrc.
-  // ──────────────────────────────────────────────────────────────
+  // ┌───────────────────────────────────────────────────────────────────────────┐
+  // │ FILE: .vscode/settings.json                                               │
+  // │ ZWECK: Workspace-Konfiguration zur Erzwingung der Projektstandards        │
+  // │ STANDARDS: v1.2.1, Cross-Platform Sync, Auto-Linting                      │
+  // └───────────────────────────────────────────────────────────────────────────┘
 
-  // 1. General Editor & Files (Sicherheits-Standard)
+  // ──────────────────────────────────────────────────────────────
+  // 1. DATEI-MANAGEMENT & SICHERHEIT
+  // ──────────────────────────────────────────────────────────────
   "files.encoding": "utf8",
   "files.eol": "\n",
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
   "files.autoGuessEncoding": false,
 
-  // Auto-Save: Verhindert Datenverlust bei SSH-Dropouts
+  // Auto-Save: Schützt vor Datenverlust bei Verbindungsabbruch (SSH/WSL)
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
 
-  // 2. File Associations (Syntax-Highlighting für Dotfiles)
+  // ──────────────────────────────────────────────────────────────
+  // 2. SYNTAX-ZUORDNUNGEN (DOTFILES)
+  // ──────────────────────────────────────────────────────────────
   "files.associations": {
     "bashrc": "shellscript",
     "bashenv": "shellscript",
     "bashprompt": "shellscript",
     "bashaliases": "shellscript",
     "bashfunctions": "shellscript",
+    "bashexports": "shellscript",
     "bashwartung": "shellscript",
     ".bash*": "shellscript",
     ".nanorc": "properties",
@@ -36,25 +39,29 @@
     "*.jsonc": "jsonc"
   },
 
-// 3. Sprachesspezifische Einstellungen
+  // ──────────────────────────────────────────────────────────────
+  // 3. SPRACHSPEZIFISCHE LOGIK
+  // ──────────────────────────────────────────────────────────────
+
+  // Shell-Skripte: Fokus auf korrekte Formatierung & Shellcheck
   "[shellscript]": {
     "editor.tabSize": 4,
     "editor.insertSpaces": true,
-    "files.eol": "\n",
-    // Falls foxundermoon nicht erkannt wird, versuche "mads-hartmann.bash-format"
-    // oder setze es auf null, damit VS Code dich beim Speichern fragt.
     "editor.defaultFormatter": "foxundermoon.shell-format",
     "editor.formatOnSave": true
   },
 
+  // Datenstrukturen: Fokus auf Kompaktheit (v1.2.1 Standard 2 Spaces)
   "[json]": { "editor.tabSize": 2 },
   "[jsonc]": { "editor.tabSize": 2 },
+  "[yaml]": { "editor.tabSize": 2 },
 
-  // 4. Markdown & Linting (Automatisierung)
+  // Markdown: Fokus auf Lesbarkeit & Linter-Integration
   "[markdown]": {
     "editor.formatOnSave": true,
     "editor.wordWrap": "on",
-    "files.trimTrailingWhitespace": false, // Erlaubt Hard-Breaks
+    // Verhindert, dass VS Code Hard-Breaks (Doppel-Leerzeichen) löscht
+    "files.trimTrailingWhitespace": false,
     "editor.quickSuggestions": {
       "comments": "off",
       "strings": "off",
@@ -62,7 +69,11 @@
     }
   },
 
-  // Linter-Anbindung (v1.2.1 Fix für MD036)
+  // ──────────────────────────────────────────────────────────────
+  // 4. LINTER & AUTOMATISIERUNG
+  // ──────────────────────────────────────────────────────────────
+
+  // Markdownlint: Verknüpfung mit deiner zentralen Regeldatei
   "markdownlint.config": {
     "extends": ".markdownlint.jsonc"
   },
@@ -70,23 +81,29 @@
     "source.fixAll.markdownlint": "explicit"
   },
 
-  // Shellcheck Integration
+  // Shellcheck: Sofortige Analyse beim Speichern
   "shellcheck.run": "onSave",
   "shellcheck.useWorkspaceRootAsWorkdir": true,
 
-  // 5. Explorer & UI (Sauberkeit)
+  // ──────────────────────────────────────────────────────────────
+  // 5. UI & EXPLORER
+  // ──────────────────────────────────────────────────────────────
   "files.exclude": {
     "**/.git": true,
     "**/.DS_Store": true,
     "**/Thumbs.db": true,
     "**/*.pyc": true,
-    "**/test_sandbox": false // Sandbox sichtbar lassen für Debugging
+    // Sandbox sichtbar lassen, um generierte Dateien zu prüfen
+    "**/test_sandbox": false
   },
 
   "editor.renderWhitespace": "boundary",
   "editor.rulers": [80, 100],
+  "editor.guides.bracketPairs": "active",
 
-  // 6. Spellchecker (CSpell)
+  // ──────────────────────────────────────────────────────────────
+  // 6. SPELLCHECKER (CSPELL) & PROJEKT-GLOSSAR
+  // ──────────────────────────────────────────────────────────────
   "cSpell.words": [
     "Assemblierung",
     "auxf",
@@ -94,7 +111,6 @@
     "bashexports",
     "bashfunctions",
     "bashprompt",
-    "bashwartung",
     "dircolors",
     "dotfilesctl",
     "Entf",
@@ -102,7 +118,7 @@
     "libcolors",
     "libengine",
     "nanorc",
-    "uath",
+    "upath",
     "Verknüpfungs",
     "Wrappern"
   ]

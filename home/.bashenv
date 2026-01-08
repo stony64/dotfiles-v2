@@ -1,110 +1,118 @@
 #!/usr/bin/env bash
 #
-# FILE: home/.bashenv
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: home/.bashenv                                                       │
+# │ ZWECK: Zentrale Umgebungsvariablen, Pfade und Shell-Optionen              │
+# │ STANDARDS: Bash >= 4.0, Google Shell Style Guide                          │
+# └───────────────────────────────────────────────────────────────────────────┘
+
 # ──────────────────────────────────────────────────────────────
-# ZENTRALE UMGEBUNGSVARIABLEN, PFADE UND SHELL-OPTIONEN
-# ──────────────────────────────────────────────────────────────
-# Zweck:    Konfiguration des fundamentalen Verhaltens der Shell.
-#           Wird von der .bashrc geladen.
-# Abhängigkeiten: libcolors.sh (optional für Manpage-Farben).
+# 1. PLATTFORM-ERKENNUNG & BIBLIOTHEKEN
 # ──────────────────────────────────────────────────────────────
 
-# @section 0. Plattform-Erkennung & Farbauflösung
-# Ermittelt das Betriebssystem und lädt Farbcodes für UI-Elemente.
 case "$(uname -s)" in
     Linux*)  export PLATFORM="linux" ;;
-    MINGW*)  export PLATFORM="windows" ;;
+    MSYS*|MINGW*|CYGWIN*) export PLATFORM="windows" ;;
     *)       export PLATFORM="unknown" ;;
 esac
 
+# Auflösung der Repository-Pfade für konsistente Farben
 DOT_REPO="${DOTFILES_REPO_PATH:-$HOME/.dotfiles}"
-COLOR_LIB="${DOT_REPO}/lib/libcolors.sh"
-CONST_LIB="${DOT_REPO}/lib/libconstants.sh"
 
-if [[ -f "$COLOR_LIB" ]]; then
-    # shellcheck disable=SC1090
-    source "$COLOR_LIB"
+# Laden der UI-Konstanten (falls vorhanden)
+if [[ -f "${DOT_REPO}/lib/libcolors.sh" ]] && [[ -f "${DOT_REPO}/lib/libconstants.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "${DOT_REPO}/lib/libcolors.sh"
+    # shellcheck disable=SC1091
+    source "${DOT_REPO}/lib/libconstants.sh"
 fi
 
-if [[ -f "$CONST_LIB" ]]; then
-    # Wir laden die Konstanten für den Zugriff auf UI_COL_*
-    # shellcheck disable=SC1090
-    source "$CONST_LIB"
-fi
+# ──────────────────────────────────────────────────────────────
+# 2. SYSTEM-PFADE (PATH)
+# ──────────────────────────────────────────────────────────────
 
-# @section 1. Pfad-Initialisierung
-# Erweitert die PATH-Variable um benutzerdefinierte Binärverzeichnisse.
-if [[ -d "$HOME/bin" ]] ; then
-    PATH="$HOME/bin:$PATH"
-fi
+# Lokale Binaries priorisieren
+[[ -d "$HOME/bin" ]] && PATH="$HOME/bin:$PATH"
+[[ -d "$HOME/.local/bin" ]] && PATH="$HOME/.local/bin:$PATH"
 export PATH
 
-# @section 2. Bash History & Shell-Optionen
-# Optimierung des Shell-Verhaltens für effizientes Arbeiten.
+# ──────────────────────────────────────────────────────────────
+# 3. BASH HISTORY & PERFORMANCE
+# ──────────────────────────────────────────────────────────────
+
 export HISTCONTROL="ignoreboth:erasedups"
-export HISTIGNORE="la:ll:lah:lat:ls:cd ..:exit:mc:au:fg:bg:jobs:history"
-export HISTSIZE=8192
-export HISTFILESIZE=16384
+export HISTIGNORE="la:ll:lah:ls:cd ..:exit:mc:history:clear"
+export HISTSIZE="${HIST_SIZE_INTERNAL:-8192}"
+export HISTFILESIZE="${HIST_FILE_SIZE_INTERNAL:-16384}"
 
-shopt -s histappend   # History anhängen statt überschreiben
-shopt -s cmdhist      # Mehrzeilige Befehle einzeilig speichern
-shopt -s cdspell      # Autokorrektur bei Verzeichnisnamen
-shopt -s checkwinsize # Fenstergröße nach jedem Befehl prüfen
-shopt -s globstar     # Erlaubt rekursive Suche mit **
+# Shell-Optionen für besseres Handling
+shopt -s histappend   # History erweitern statt überschreiben
+shopt -s cmdhist      # Mehrzeilige Befehle konsolidieren
+shopt -s cdspell      # Tippfehler-Korrektur für 'cd'
+shopt -s checkwinsize # Terminal-Größe nach jedem Befehl prüfen
+shopt -s globstar     # Rekursives Wildcard-Matching (**/*.sh)
 
-# @section 3. Manpages in Farbe (Linux-only)
-# Nutzt ANSI-Farben zur Hervorhebung in Handbüchern via LESS_TERMCAP.
-if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
+# ──────────────────────────────────────────────────────────────
+# 4. MANPAGES IN FARBE (LESS_TERMCAP)
+# ──────────────────────────────────────────────────────────────
+# Nutzt die atomaren UI-Variablen aus libcolors.sh/libconstants.sh
+
+if [[ "${PLATFORM:-}" == "linux" ]]; then
     export MANPAGER="less -s -M +Gg"
 
-    # Nutzung der konsistenten UI_COL_ Variablen aus v1.2.1
-    export LESS_TERMCAP_mb="${ESC_START}${UI_COL_RED}${ESC_END}"       # Blinkend
-    export LESS_TERMCAP_md="${ESC_START}${ATTR_BOLD};33${ESC_END}"     # Headlines (Gelb Fett)
-    export LESS_TERMCAP_me="${ESC_START}${ATTR_RESET}${ESC_END}"       # Ende aller Modi
-    export LESS_TERMCAP_se="${ESC_START}${ATTR_RESET}${ESC_END}"       # Ende Standout
-    export LESS_TERMCAP_so="${ESC_START}01;44;33${ESC_END}"            # Statuszeile
-    export LESS_TERMCAP_ue="${ESC_START}${ATTR_RESET}${ESC_END}"       # Ende Unterstreichung
-    export LESS_TERMCAP_us="${ESC_START}${ATTR_UNDERLINE};32${ESC_END}" # Unterstrichen (Grün)
+    # Start-Sequenzen (md: Fett/Gelb, us: Unterstrichen/Grün, so: Standout/Status)
+    export LESS_TERMCAP_mb="${UI_ESC_START:-}${UI_COL_RED:-}${UI_ESC_END:-}"
+    export LESS_TERMCAP_md="${UI_ESC_START:-}${UI_ATTR_BOLD:-};${UI_COL_YELLOW:-}${UI_ESC_END:-}"
+    export LESS_TERMCAP_us="${UI_ESC_START:-}${UI_ATTR_UNDERLINE:-};${UI_COL_GREEN:-}${UI_ESC_END:-}"
+    export LESS_TERMCAP_so="${UI_ESC_START:-}${UI_ATTR_BOLD:-};${UI_BG_BLUE:-};${UI_COL_YELLOW:-}${UI_ESC_END:-}"
+
+    # Reset-Sequenzen
+    export LESS_TERMCAP_me="${UI_COL_RESET:-}"
+    export LESS_TERMCAP_se="${UI_COL_RESET:-}"
+    export LESS_TERMCAP_ue="${UI_COL_RESET:-}"
 fi
 
-# @section 4. SSH-Erkennung & Locales
-# Anpassung für Remote-Sitzungen und Zeichensätze.
+# ──────────────────────────────────────────────────────────────
+# 5. SSH & LOCALES
+# ──────────────────────────────────────────────────────────────
+
 if [[ -n "${SSH_CONNECTION:-}" ]]; then
-    export TMOUT=0
-    if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-        export LC_ALL="C.UTF-8" # v1.2.1 Fix: Neutrales UTF-8 für Kompatibilität
-    else
-        export LC_ALL="en_US.UTF-8"
+    export TMOUT=0 # Verhindert Auto-Logout in Remote-Sitzungen
+fi
+
+# Fix für UTF-8 (v1.2.1 Standard)
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
+
+# ──────────────────────────────────────────────────────────────
+# 6. TOOL-KONFIGURATION (DIRCOLORS / FZF)
+# ──────────────────────────────────────────────────────────────
+
+# Dircolors für LS_COLORS
+if [[ "${PLATFORM:-}" == "linux" ]]; then
+    if [[ -f "$HOME/.dircolors" ]]; then
+        eval "$(dircolors -b "$HOME/.dircolors")"
     fi
 fi
 
-# @section 5. Host-spezifische Pfade (Linux)
-# Individuelle Anpassungen basierend auf dem Hostnamen.
-if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-    case "$(hostname)" in
-        raspifix) [[ -d "/opt/script" ]] && PATH="$PATH:/opt/script" ;;
-        proxmox*) [[ -d "/opt/scripts" ]] && PATH="$PATH:/opt/scripts" ;;
-        *backup*) export MAIL_ON_ERROR="root@localhost" ;;
-    esac
-fi
-
-# @section 6. Tool-Initialisierungen
-# Laden von Drittanbieter-Tools (FZF, Dircolors).
-if command -v fzf >/dev/null 2>&1 && [[ -f "$HOME/.fzf.bash" ]]; then
+# FZF-Integration
+if [[ -f "$HOME/.fzf.bash" ]]; then
     # shellcheck disable=SC1091
     source "$HOME/.fzf.bash"
 fi
 
-if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-    if [[ -f "$HOME/.dircolors" ]]; then
-        eval "$(dircolors -b "$HOME/.dircolors")"
-    elif [[ -f /etc/DIR_COLORS ]]; then
-        eval "$(dircolors -b /etc/DIR_COLORS)"
-    fi
+# ──────────────────────────────────────────────────────────────
+# 7. HOST-SPEZIFISCHE ANPASSUNGEN & LOCALES
+# ──────────────────────────────────────────────────────────────
+
+if [[ "${PLATFORM:-}" == "linux" ]]; then
+    case "$(hostname)" in
+        raspifix) [[ -d "/opt/script" ]] && PATH="$PATH:/opt/script" ;;
+        proxmox*) [[ -d "/opt/scripts" ]] && PATH="$PATH:/opt/scripts" ;;
+    esac
 fi
 
-# @section 7. Lokale Overrides
-# Erlaubt systemspezifische Anpassungen ohne das Repo zu verändern.
+# Lokale Overrides (Letztes Wort für das lokale System)
 [[ -f "$HOME/.bash_env_local" ]] && source "$HOME/.bash_env_local"
 
 true

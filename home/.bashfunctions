@@ -1,150 +1,125 @@
 #!/usr/bin/env bash
 #
-# FILE: home/.bashfunctions
-# ──────────────────────────────────────────────────────────────
-# SAMMLUNG NÜTZLICHER SHELL-FUNKTIONEN
-# ──────────────────────────────────────────────────────────────
-# Zweck:    Erweiterte Logik für Suche, Archivierung und System-
-#           Status. Optimiert für Linux und Windows (Git-Bash).
-# Abhängigkeiten: .bashenv (für $PLATFORM), libcolors.sh (empfohlen).
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: home/.bashfunctions                                                 │
+# │ ZWECK: Sammlung nützlicher Shell-Funktionen (Linux & Windows)             │
+# │ STANDARDS: Bash >= 4.0, Modulares Design, Google Shell Style Guide        │
+# └───────────────────────────────────────────────────────────────────────────┘
 
-# @section Suche & Finden
+# ──────────────────────────────────────────────────────────────
+# 1. SUCHE & FINDEN
+# ──────────────────────────────────────────────────────────────
 
 # @description Schnelle Dateisuche im aktuellen Verzeichnis (case-insensitive).
-# @param $1 Suchbegriff (Teil des Dateinamens).
-# @stdout Liste der gefundenen Pfade.
 f() {
-    if [[ $# -eq 0 ]]; then
-        echo "Usage: f <dateiname>"
-        return 1
-    fi
+    [[ $# -eq 0 ]] && { echo "Nutzung: f <dateiname>"; return 1; }
     find . -type f -iname "*$1*"
 }
 
 # @description Rekursive Textsuche in Dateien, ignoriert Binärdaten.
-# @param $1 Suchbegriff oder Regular Expression.
-# @stdout Zeilen mit Fundstellen inklusive Dateinamen und Zeilennummer.
 grepr() {
-    if [[ $# -eq 0 ]]; then
-        echo "Usage: grepr <suchbegriff>"
-        return 1
-    fi
-    grep -rnI "$1" .
+    [[ $# -eq 0 ]] && { echo "Nutzung: grepr <suchbegriff>"; return 1; }
+    grep -rnI --color=always "$1" .
 }
 
-# @section Archivierung & Packen
+# ──────────────────────────────────────────────────────────────
+# 2. ARCHIVIERUNG & EXTRAKTION
+# ──────────────────────────────────────────────────────────────
 
 # @description Intelligentes Entpacken verschiedenster Archivtypen.
-# @param $1 Pfad zum Archiv.
-# @stdout Status des Entpackvorgangs.
 extract() {
-    if [[ -f "$1" ]]; then
-        case "$1" in
-            *.tar.bz2)   tar xjf "$1"     ;;
-            *.tar.gz)    tar xzf "$1"     ;;
-            *.bz2)       bunzip2 "$1"     ;;
-            *.rar)       unrar x "$1"     ;;
-            *.gz)        gunzip "$1"      ;;
-            *.tar)       tar xf "$1"      ;;
-            *.tbz2)      tar xjf "$1"     ;;
-            *.tgz)       tar xzf "$1"     ;;
-            *.zip)       unzip "$1"       ;;
-            *.Z)         uncompress "$1"  ;;
-            *.7z)        7z x "$1"        ;;
-            *)           echo "'$1' kann nicht via extract() entpackt werden." ;;
-        esac
-    else
-        echo "'$1' ist keine gültige Datei."
-        return 1
-    fi
+    local file="$1"
+    [[ -z "$file" ]] && { echo "Keine Datei angegeben."; return 1; }
+    [[ ! -f "$file" ]] && { echo "'$file' ist keine gültige Datei."; return 1; }
+
+    case "$file" in
+        *.tar.bz2|*.tbz2) tar xjf "$file"    ;;
+        *.tar.gz|*.tgz)   tar xzf "$file"    ;;
+        *.bz2)            bunzip2 "$file"    ;;
+        *.rar)            unrar x "$file"    ;;
+        *.gz)             gunzip "$file"     ;;
+        *.tar)            tar xf "$file"     ;;
+        *.zip)            unzip "$file"      ;;
+        *.Z)              uncompress "$file" ;;
+        *.7z)             7z x "$file"       ;;
+        *)                echo "Fehler: '$file' Format nicht unterstützt." ; return 1 ;;
+    esac
 }
 
-# @section Netzwerk-Helfer
+# ──────────────────────────────────────────────────────────────
+# 3. NETZWERK & DIAGNOSE
+# ──────────────────────────────────────────────────────────────
 
-# @description Zeigt die lokale und öffentliche IP-Adresse an.
-# @stdout Lokale IP (Interface) und öffentliche IP (via ifconfig.me).
+# @description Zeigt lokale und öffentliche IP-Adressen.
 myip() {
-    echo -n "Lokale IP: "
-    if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-        # v1.2.1: Fallback auf hostname -i falls -I nicht verfügbar
+    echo -e "${UI_ATTR_BOLD:-}Netzwerk-Status:${UI_COL_RESET:-}"
+
+    # Lokale IP
+    echo -n "  Lokale IP:  "
+    if [[ "${PLATFORM:-}" == "linux" ]]; then
         hostname -I 2>/dev/null | awk '{print $1}' || hostname -i
-    elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
+    elif [[ "${PLATFORM:-}" == "windows" ]]; then
         ipconfig | grep -i "IPv4" | awk -F: '{ print $2 }' | head -n 1 | sed 's/^[ \t]*//'
     fi
 
+    # Öffentliche IP
     if command -v curl >/dev/null 2>&1; then
-        echo -n "Öffentliche IP: "
+        echo -n "  Öffentlich: "
         local pub_ip
-        pub_ip=$(curl -s --connect-timeout 5 https://ifconfig.me)
+        pub_ip=$(curl -s --connect-timeout 3 https://ifconfig.me)
         echo "${pub_ip:-Nicht erreichbar}"
     fi
 }
 
-# @section Plattform-Spezifische Helfer
+# ──────────────────────────────────────────────────────────────
+# 4. PLATTFORM-SPEZIFISCHE HELFER
+# ──────────────────────────────────────────────────────────────
 
-if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-    # @description Listet die 10 Prozesse mit dem höchsten Speicherverbrauch.
-    top_mem() {
-        ps auxf | sort -nr -k 4 | head -n 10
-    }
+if [[ "${PLATFORM:-}" == "linux" ]]; then
+    # Top-Prozesse nach Speicher
+    top_mem() { ps auxf | sort -nr -k 4 | head -n 10; }
+    # Top-Prozesse nach CPU
+    top_cpu() { ps auxf | sort -nr -k 3 | head -n 10; }
 
-    # @description Listet die 10 Prozesse mit der höchsten CPU-Last.
-    top_cpu() {
-        ps auxf | sort -nr -k 3 | head -n 10
-    }
-
-elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
-    # @description Wandelt Windows-Pfade in Unix-Pfade um.
-    # @param $1 Windows-Pfad (optional). Nutzt Clipboard, wenn leer.
-    # @stdout Konvertierter Unix-Pfad.
+elif [[ "${PLATFORM:-}" == "windows" ]]; then
+    # @description Wandelt Windows-Pfade in Unix-Pfade um (inkl. Clipboard).
     upath() {
         if [[ -z "${1:-}" ]]; then
             local clip
-            # v1.2.1: Nutze powershell core oder desktop und entferne Zeilenumbrüche sauberer
+            # Robustere Clipboard-Abfrage via PowerShell
             clip=$(powershell.exe -NoProfile -Command "Get-Clipboard" 2>/dev/null | tr -d '\r\n')
-            if [[ -n "$clip" ]]; then
-                cygpath -u "$clip"
-            else
-                echo "Zwischenablage leer oder kein Zugriff."
-                return 1
-            fi
+            [[ -z "$clip" ]] && { echo "Clipboard leer."; return 1; }
+            cygpath -u "$clip"
         else
             cygpath -u "$1"
         fi
     }
 fi
 
-# @section System-Status
+# ──────────────────────────────────────────────────────────────
+# 5. SYSTEM-STATUS & UTILS
+# ──────────────────────────────────────────────────────────────
 
-# @description Kurzer Integritätscheck der Systemressourcen.
-# @stdout Zusammenfassung von Datum, User, Uptime und Disk-Usage.
+# @description Schneller Überblick über Systemressourcen.
 health() {
-    echo "--- System Health Check ---"
-    echo -n "Datum:  " && date
-    echo -n "User:   " && whoami
-    # Uptime -p ist Linux-spezifisch, Windows braucht Fallback
-    echo -n "Uptime: " && { uptime -p 2>/dev/null || uptime; }
+    echo -e "${UI_ATTR_BOLD:-}--- SYSTEM HEALTH ---${UI_COL_RESET:-}"
+    echo -e "Zeit:   $(date '+%Y-%m-%d %H:%M:%S')"
+    echo -e "User:   $(whoami) @ $(hostname)"
+    echo -ne "Uptime: " && { uptime -p 2>/dev/null || uptime; }
 
-    if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-        echo "Disk Usage:"
+    if [[ "${PLATFORM:-}" == "linux" ]]; then
+        echo -e "\n${UI_COL_CYAN:-}Speicherplatz (/):${UI_COL_RESET:-}"
         df -h / | tail -n 1
-    elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
-        echo "Disk Usage (C:):"
+    elif [[ "${PLATFORM:-}" == "windows" ]]; then
+        echo -e "\n${UI_COL_CYAN:-}Speicherplatz (C:):${UI_COL_RESET:-}"
         df -h /c 2>/dev/null | tail -n 1
     fi
 }
 
-# @section Datei- & Verzeichnis-Manipulation
-
-# @description Erstellt ein Verzeichnis und wechselt sofort hinein.
-# @param $1 Name oder Pfad des Verzeichnisses.
+# @description Erstellt Verzeichnisbaum und wechselt hinein.
 mkd() {
-    if [[ -z "${1:-}" ]]; then
-        echo "Usage: mkd <verzeichnis>"
-        return 1
-    fi
-    mkdir -p "$1" && cd "$1"
+    [[ -z "${1:-}" ]] && { echo "Nutzung: mkd <pfad>"; return 1; }
+    mkdir -p "$1" && cd "$1" || return 1
 }
 
 true

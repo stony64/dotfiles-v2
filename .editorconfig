@@ -1,67 +1,68 @@
 #
-# FILE: .editorconfig
-# ──────────────────────────────────────────────────────────────
-# ZENTRALE EDITOR-KONFIGURATION (v1.2.1)
-# ──────────────────────────────────────────────────────────────
-# Zweck:       Sicherstellung einheitlicher Codierung und Formatierung.
-#              Verhindert "Whitespace-Diffs" und CRLF-Konflikte.
-# Geltungsbereich: Das gesamte Repository (root=true).
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: .editorconfig                                                       │
+# │ ZWECK: Konsistente Formatierung über verschiedene Editoren und IDEs hinweg│
+# │ STANDARDS: v1.2.1, UTF-8, LF, Cross-Platform Compliance                   │
+# └───────────────────────────────────────────────────────────────────────────┘
 
+# Markiert dieses Verzeichnis als Root - Suche nach .editorconfig endet hier.
 root = true
 
 # ──────────────────────────────────────────────────────────────
-# 1. Globale Standardkonfiguration
+# 1. GLOBALE STANDARDKONFIGURATION
 # ──────────────────────────────────────────────────────────────
 [*]
 charset = utf-8
-end_of_line = lf                # Unix-Zeilenenden erzwingen (Wichtig für Shell)
-insert_final_newline = true     # POSIX-konforme Leerzeile am Ende
-trim_trailing_whitespace = true # Entfernt Leerzeichen am Zeilenende
-indent_style = space
+end_of_line = lf                # Unix-Zeilenenden erzwingen (essenziell für Shell)
+insert_final_newline = true     # POSIX-Standard: Jede Datei endet mit einer Leerzeile
+trim_trailing_whitespace = true # Verhindert unnötige Diff-Glitches
+indent_style = space            # Leerzeichen statt Tabs (Standard für modernes Dev)
 indent_size = 4
 tab_width = 4
 
 # ──────────────────────────────────────────────────────────────
-# 2. Shell-Skripte & Dotfiles
+# 2. SHELL-SKRIPTE & DOTFILES
 # ──────────────────────────────────────────────────────────────
-# Deckt alle Shell-Skripte und die im Projekt genutzten Dotfiles ab.
+# Stellt sicher, dass alle Skripte und Konfigurationsdateien einheitlich bleiben.
 [*.{sh,bash}]
 indent_style = space
 indent_size = 4
 
-# Spezifische Erfassung von Bash-Dateien ohne klassische Endung
-[{.bash*,.dircolors,.nanorc,.editorconfig,bashrc,bashenv,bashaliases}]
+# Erfassung von Dateien ohne Endung oder mit spezifischen Dotfile-Präfixen
+[{.bash*,.dircolors,.nanorc,.editorconfig,bashrc,bashenv,bashaliases,bashfunctions,bashprompt}]
 indent_style = space
 indent_size = 4
 
 # ──────────────────────────────────────────────────────────────
-# 3. Dokumentation (Markdown)
+# 3. DOKUMENTATION (MARKDOWN)
 # ──────────────────────────────────────────────────────────────
 [*.md]
 max_line_length = off
-# Hard-Breaks in Markdown (2 Leerzeichen) dürfen nicht gelöscht werden:
+# Wichtig: Markdown nutzt zwei Leerzeichen am Zeilenende für Hard-Breaks.
+# Daher deaktivieren wir trim_trailing_whitespace hier gezielt.
 trim_trailing_whitespace = false
 indent_style = space
 indent_size = 4
 
 # ──────────────────────────────────────────────────────────────
-# 4. Datenstrukturen (YAML/JSON)
+# 4. DATENSTRUKTUREN & CI/CD (YAML/JSON)
 # ──────────────────────────────────────────────────────────────
+# YAML und JSON nutzen standardmäßig 2 Leerzeichen.
 [*.{yml,yaml,json,jsonc}]
 indent_style = space
 indent_size = 2
 
 # ──────────────────────────────────────────────────────────────
-# 5. Windows-spezifische Skripte (Optional)
+# 5. WINDOWS NATIVE SKRIPTE
 # ──────────────────────────────────────────────────────────────
-# Falls PowerShell oder Batch nativ unter Windows verbleiben müssen:
+# Falls PowerShell oder Batch-Dateien nativ für Windows-Umgebungen bleiben:
 [*.{bat,ps1}]
 end_of_line = crlf
 
 # ──────────────────────────────────────────────────────────────
-# 6. Build-Systeme
+# 6. BUILD-SYSTEME (SPECIALS)
 # ──────────────────────────────────────────────────────────────
 [{Makefile,makefile}]
-indent_style = tab              # Makefiles erfordern zwingend Tabs!
+# Makefiles funktionieren NUR mit echten Tab-Zeichen (Hard-Tabs).
+indent_style = tab
 indent_size = 4

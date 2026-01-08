@@ -1,77 +1,110 @@
 #!/usr/bin/env bash
 #
-# FILE: home/.bashaliases
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: home/.bashaliases                                                   │
+# │ ZWECK: Plattformübergreifende Aliase für interaktive Shells               │
+# │ STANDARDS: Bash >= 4.0, Modulares Dotfiles-System                         │
+# └───────────────────────────────────────────────────────────────────────────┘
+
+# Hinweis: Diese Datei wird üblicherweise von der .bashrc gesourct.
+# Da Aliase in Skripten standardmäßig nicht expandiert werden, ist diese
+# Datei primär für die interaktive Nutzung optimiert.
+
 # ──────────────────────────────────────────────────────────────
-# PLATTFORMÜBERGREIFENDE ALIASE FÜR INTERAKTIVE SHELLS
+# 1. PLATTFORM-DETEKTION (Fallback-Logik)
 # ──────────────────────────────────────────────────────────────
-# Zweck:    Abkürzungen für Navigation, Sicherheit und Tools.
-#           Unterscheidet via $PLATFORM zwischen Linux und Windows.
-# Abhängigkeiten: Bash >= 4.0, .bashenv (für $PLATFORM).
+# Falls $PLATFORM nicht durch .bashenv gesetzt wurde, ermitteln wir sie hier.
+if [[ -z "${PLATFORM:-}" ]]; then
+    case "$(uname -s)" in
+        Linux*)  _OS="linux" ;;
+        MSYS*|MINGW*|CYGWIN*) _OS="windows" ;;
+        *) _OS="unknown" ;;
+    esac
+else
+    _OS="$PLATFORM"
+fi
+
+# ──────────────────────────────────────────────────────────────
+# 2. NAVIGATION & BASIS-BEFEHLE
 # ──────────────────────────────────────────────────────────────
 
-# @section Navigation
-# Schnelle Verzeichniswechsel ohne unnötigen Tippaufwand.
+# Schnelle Navigation
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
-alias -- -='cd -'  # Wechselt zum vorherigen Verzeichnis
+alias -- -='cd -'
 
-# @section LS & Verzeichnis-Listing
-# Optimierte Darstellung von Dateien und Ordnern.
-if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-    # Linux (Debian/Ubuntu) spezifische Flags
-    alias ls='ls --color=auto --group-directories-first'
-    alias ll='ls -lah --color=auto --group-directories-first'
-elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
-    # Git Bash: --show-control-chars sorgt für korrekte Darstellung von Sonderzeichen/Umlauten
-    alias ls='ls --color=auto --show-control-chars --group-directories-first'
-    alias ll='ls -lah --color=auto --show-control-chars --group-directories-first'
+# Verzeichnis-Listing (Farben & Sortierung)
+_LS_COMMON="--color=auto --group-directories-first"
+if [[ "$_OS" == "linux" ]]; then
+    alias ls="ls $_LS_COMMON"
+    alias ll="ls -lah $_LS_COMMON"
+elif [[ "$_OS" == "windows" ]]; then
+    # --show-control-chars für korrekte Umlaut-Darstellung in Git Bash
+    alias ls="ls $_LS_COMMON --show-control-chars"
+    alias ll="ls -lah $_LS_COMMON --show-control-chars"
 else
-    # Fallback für unbekannte Systeme
-    alias ls='ls --color=auto'
-    alias ll='ls -la'
+    alias ls="ls --color=auto"
+    alias ll="ls -la"
 fi
 
 alias l='ls -CF'
 alias la='ls -A'
 
-# @section Sicherheit (Interaktive Bestätigung)
-# Schützt vor versehentlichem Überschreiben oder Löschen von Daten.
+# ──────────────────────────────────────────────────────────────
+# 3. SICHERHEIT & SCHUTZ (Interaktive Bestätigung)
+# ──────────────────────────────────────────────────────────────
+# Verhindert unbeabsichtigten Datenverlust bei Standardoperationen.
 alias cp='cp -i'
 alias mv='mv -i'
 alias rm='rm -i'
 alias ln='ln -i'
 
-# @section Werkzeug-Verbesserungen
-# Standard-Tools mit sinnvolleren Standard-Parametern.
+# ──────────────────────────────────────────────────────────────
+# 4. WERKZEUG-OPTIMIERUNG (Defaults)
+# ──────────────────────────────────────────────────────────────
+
+# Suche mit Farben
 alias grep='grep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
-alias df='df -h' # Human-readable (MB/GB statt Blöcke)
+
+# System-Übersicht (Human Readable)
+alias df='df -h'
 alias du='du -h'
 
-# @section Plattformspezifische Befehle
-# Aliase, die nur auf dem jeweiligen Betriebssystem Sinn ergeben.
-if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-    # System-Wartung und Steuerung (erfordert sudo)
+# ──────────────────────────────────────────────────────────────
+# 5. PLATTFORMSPEZIFISCHE ERWEITERUNGEN
+# ──────────────────────────────────────────────────────────────
+
+if [[ "$_OS" == "linux" ]]; then
+    # System-Management (Debian/Ubuntu-basiert)
     alias update='sudo apt update && sudo apt upgrade'
     alias jc='journalctl -xe'
     alias sc='systemctl'
-elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
-    # Schneller Zugriff auf Windows-Ressourcen aus der Git Bash
+    alias pkg-search='apt-cache search'
+elif [[ "$_OS" == "windows" ]]; then
+    # Windows/Git-Bash Integration
     alias explorer='explorer . '
     alias code='code . '
-    # Schneller Sprung in das Windows-Heimatverzeichnis
-    alias cuser='cd "/c/Users/${USER}"'
+    # Schneller Zugriff auf das native Windows-Home
+    if [[ -n "${USERPROFILE:-}" ]]; then
+         alias cwin='cd "$(cygpath "$USERPROFILE")"'
+    fi
 fi
 
-# @section Projekt-Spezifisch
-# Zentraler Zugriffspunkt für das Dotfiles-Management-Skript.
-# Nutzt dynamisch $HOME, um unabhängig vom absoluten Pfad zu bleiben.
+# ──────────────────────────────────────────────────────────────
+# 6. DOTFILES-MANAGEMENT & UTILS
+# ──────────────────────────────────────────────────────────────
+
+# Direkter Zugriff auf den Controller (Pfad-unabhängig via $HOME)
 alias dctl="${HOME}/.dotfiles/dotfilesctl.sh"
 
-# @section Utilities & Debugging
-# Hilfswerkzeuge für die Shell-Konfiguration.
-alias reload='source ~/.bashrc && echo "Shell-Konfiguration neu geladen."'
-# Zeigt die PATH-Variable übersichtlich Zeile für Zeile an
-alias path='echo -e ${PATH//:/\\n}'
+# Shell-Reload (lädt das gesamte Environment neu)
+alias reload='source ~/.bashrc && echo "Environment erfolgreich neu geladen."'
+
+# Zeigt den PATH übersichtlich formatiert an (pro Zeile ein Eintrag)
+alias path='echo -e "${PATH//:/\\n}"'
+
+# Aufräumen lokaler Variablen
+unset _OS _LS_COMMON

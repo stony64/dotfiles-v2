@@ -1,34 +1,30 @@
 #!/usr/bin/env bash
 #
-# FILE: home/.bashrc
-# ──────────────────────────────────────────────────────────────
-# HAUPT-KONFIGURATIONSFILE FÜR INTERAKTIVE SHELLS (v1.2.1)
-# ──────────────────────────────────────────────────────────────
-# Zweck:       Zentrale Orchestrierung der Shell-Umgebung.
-#              Erkennt Plattformen (Win/Lin) und lädt Module.
-# Standards:   Shellcheck-konform, Idempotent, Sicher.
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: home/.bashrc                                                        │
+# │ ZWECK: Haupt-Konfigurationsfile für interaktive Shells (v1.2.1)           │
+# │ STANDARDS: set -u (optional), Bash >= 4.0, Google Shell Style Guide       │
+# └───────────────────────────────────────────────────────────────────────────┘
 
 # ──────────────────────────────────────────────────────────────
 # 0. INTERAKTIVITÄTS-CHECK
 # ──────────────────────────────────────────────────────────────
-# Beendet die Ausführung sofort, wenn die Shell nicht interaktiv ist
-# (wichtig für scp, rsync und automatisierte Skripte).
+# Verhindert Ausführung bei nicht-interaktiven Aufrufen (scp, rsync).
 case "$-" in
     *i*) ;; # Interaktiv -> Fortfahren
     *) return ;;
 esac
 
 # ──────────────────────────────────────────────────────────────
-# 1. PLATTFORM-SPEZIFIKATION & FIXES
+# 1. PLATTFORM-DETEKTION & INITIALISIERUNG
 # ──────────────────────────────────────────────────────────────
-# Windows (Git Bash / MSYS2) spezifische Vorbereitung für Symlinks.
+
+# Windows-spezifische Vorbereitung für native NTFS-Symlinks.
 if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
     export MSYS="winsymlinks:nativestrict"
 fi
 
-# Zentrale Variable für plattformabhängige Logik in Untermodulen.
-# v1.2.1 Sync: Identisch mit der Logik in .bashenv für Redundanz-Sicherheit.
+# Zentrale Plattformvariable (v1.2.1 Standard)
 case "$(uname -s)" in
     Linux*)                export PLATFORM="linux" ;;
     MINGW*|MSYS*|CYGWIN*)  export PLATFORM="windows" ;;
@@ -36,45 +32,46 @@ case "$(uname -s)" in
 esac
 
 # ──────────────────────────────────────────────────────────────
-# 2. MODUL-ORCHESTRIERUNG
+# 2. MODUL-ORCHESTRIERUNG (BOOTSTRAP)
 # ──────────────────────────────────────────────────────────────
-# Lädt die Teilkonfigurationen in einer logischen Reihenfolge.
-# 1. Env/Path -> 2. Exports -> 3. Prompt -> 4. Aliase -> 5. Funktionen
+# Die Reihenfolge ist kritisch: Erst Basis-Umgebung, dann UI/Aliase.
+
 readonly BASH_MODULES=(
-    "$HOME/.bashenv"
-    "$HOME/.bashexports"
-    "$HOME/.bashprompt"
-    "$HOME/.bashaliases"
-    "$HOME/.bashfunctions"
+    "$HOME/.bashenv"        # 1. Pfade & Shell-Optionen
+    "$HOME/.bashexports"    # 2. Tool-Exporte & Editoren
+    "$HOME/.bashprompt"     # 3. PS1-Konfiguration
+    "$HOME/.bashaliases"    # 4. Abkürzungen
+    "$HOME/.bashfunctions"  # 5. Erweiterte Logik
 )
 
-for file in "${BASH_MODULES[@]}"; do
-    if [[ -f "$file" ]]; then
+for module in "${BASH_MODULES[@]}"; do
+    if [[ -f "$module" ]]; then
         # shellcheck disable=SC1090
-        if ! source "$file"; then
-            # Fallback-Farbe (Rot), falls libcolors noch nicht geladen wurde
-            echo -e "\e[31m[!] Fehler beim Laden von: $(basename "$file")\e[0m" >&2
+        if ! source "$module"; then
+            # Fehlermeldung mit rotem Fallback, falls libcolors noch nicht geladen
+            echo -e "\e[31m[!] Fehler beim Laden des Moduls: ${module##*/}\e[0m" >&2
         fi
     fi
 done
 
 # ──────────────────────────────────────────────────────────────
-# 3. PROMPT-INITIALISIERUNG
+# 3. PROMPT-AKTIVIERUNG
 # ──────────────────────────────────────────────────────────────
-# Ruft die Prompt-Funktion aus .bashprompt auf.
+
 if command -v set_bash_prompt >/dev/null 2>&1; then
     set_bash_prompt
 else
-    # Simpler Fallback-Prompt für den Notfall (ohne UI_COL_ Abhängigkeit)
+    # Minimalistischer Fallback-Prompt für den Havariefall
     PS1='\[\e[32m\]\u@\h\[\e[0m\]:\[\e[34m\]\w\[\e[0m\]\$ '
 fi
 
 # ──────────────────────────────────────────────────────────────
 # 4. AUTO-COMPLETION (BASH & GIT)
 # ──────────────────────────────────────────────────────────────
-# Aktiviert die intelligente Befehlsvervollständigung.
+# Aktiviert die intelligente Tab-Vervollständigung für Befehle und Git.
+
 if ! shopt -oq posix; then
-    readonly BC_PATHS=(
+    _BC_PATHS=(
         "/usr/share/bash-completion/bash_completion"
         "/etc/bash_completion"
         "/usr/local/etc/bash_completion"
@@ -82,25 +79,32 @@ if ! shopt -oq posix; then
         "/usr/share/bash-completion/completions/git"
     )
 
-    for bc in "${BC_PATHS[@]}"; do
-        if [[ -f "$bc" ]]; then
+    for bc_path in "${_BC_PATHS[@]}"; do
+        if [[ -f "$bc_path" ]]; then
             # shellcheck disable=SC1090
-            source "$bc"
+            source "$bc_path"
         fi
     done
+    unset _BC_PATHS
 fi
 
 # ──────────────────────────────────────────────────────────────
-# 5. LOKALE ANPASSUNGEN & EDITOR-FIXES
+# 5. TERMINAL-OPTIMIERUNG & LOKALE ANPASSUNGEN
 # ──────────────────────────────────────────────────────────────
-# Deaktiviert XON/XOFF Flow Control (erlaubt Ctrl+S in Nano/Micro).
-[[ -t 0 ]] && stty -ixon 2>/dev/null
 
-# Lädt optionale, systemspezifische Overrides (nicht im Git).
+# Deaktiviert XON/XOFF Flow Control.
+# Dies ermöglicht die Nutzung von Ctrl+S (Save) in Editoren wie Micro oder Nano.
+if [[ -t 0 ]]; then
+    stty -ixon 2>/dev/null
+fi
+
+# Lädt optionale, systemspezifische Anpassungen (nicht im Git/Whitelist).
+# Hier können private Aliase oder experimentelle Funktionen stehen.
 [[ -f "$HOME/.bashrc_local" ]] && source "$HOME/.bashrc_local"
 
 # ──────────────────────────────────────────────────────────────
 # ABSCHLUSS
 # ──────────────────────────────────────────────────────────────
-# Sicherstellen, dass die Datei immer mit Erfolg (0) endet.
+
+# Erfolgreicher Exit-Status für das Sourcing
 true

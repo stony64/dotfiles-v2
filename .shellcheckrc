@@ -1,76 +1,57 @@
-#
 # ┌───────────────────────────────────────────────────────────────────────────┐
-# │ FILE: .gitattributes                                                      │
-# │ ZWECK: Erzwingung korrekter Zeilenenden (LF) & Binär-Handling              │
-# │ STANDARDS: v1.2.1, Cross-Platform Safety (Win/Lin)                        │
+# │ FILE: .shellcheckrc                                                       │
+# │ ZWECK: Konfiguration für statische Code-Analyse (v1.2.1)                  │
+# │ STANDARDS: Bash 4.0+, Modulare Lib-Struktur, Cross-Plattform              │
 # └───────────────────────────────────────────────────────────────────────────┘
 
 # ──────────────────────────────────────────────────────────────
-# 1. GLOBALER STANDARD
+# 1. BASISEINSTELLUNGEN
 # ──────────────────────────────────────────────────────────────
-# Automatische Texterkennung für alle Dateien.
-# Git entscheidet selbst, ob eine Datei Text ist.
-* text=auto
+
+# Erzwinge Bash als Dialekt (verhindert Warnungen für POSIX-Abweichungen)
+shell=bash
+
+# Mindestversion für Bash-Features festlegen (v1.2.1 Standard)
+minimum-bash-version=4.0
 
 # ──────────────────────────────────────────────────────────────
-# 2. SHELL-SKRIPTE & DOTFILES (STRIKT LF)
+# 2. SOURCING & PFAD-LOGIK (WICHTIG FÜR LIB-STRUKTUR)
 # ──────────────────────────────────────────────────────────────
-# Hier gehen wir auf Nummer sicher: Diese Dateien MÜSSEN LF haben,
-# egal was die lokale Git-Konfiguration (core.autocrlf) sagt.
-*.sh            text eol=lf
-.bash* text eol=lf
-bashrc          text eol=lf
-bashenv         text eol=lf
-bashaliases     text eol=lf
-bashprompt      text eol=lf
-bashfunctions   text eol=lf
-.dircolors      text eol=lf
-.nanorc         text eol=lf
-dotfilesctl.sh  text eol=lf
+
+# Erlaube 'source' Befehle auch wenn der Pfad dynamisch ist (z.B. mit Variablen)
+# Deaktiviert SC1090 global, da wir lib-Laden über Pfad-Variablen steuern.
+disable=SC1090
+
+# Suche nach gesourcten Dateien relativ zum Projekt-Root
+source-path=SCRIPTDIR
+source-path=lib/
 
 # ──────────────────────────────────────────────────────────────
-# 3. KONFIGURATION & DATA (LF)
+# 3. GLOBALE AUSNAHMEN (REASONING)
 # ──────────────────────────────────────────────────────────────
-*.json          text eol=lf
-*.jsonc         text eol=lf
-*.yml           text eol=lf
-*.yaml          text eol=lf
-*.toml          text eol=lf
-*.conf          text eol=lf
-*.ini           text eol=lf
-.editorconfig   text eol=lf
-.gitignore      text eol=lf
-.gitattributes  text eol=lf
-.shellcheckrc   text eol=lf
-.markdownlint* text eol=lf
+
+# SC2034: "Variable appears unused"
+# Oft in libconstants.sh der Fall, da die Variablen in anderen Skripten genutzt werden.
+disable=SC2034
+
+# SC2155: "Declare and assign separately to avoid masking return values"
+# Wir erlauben dies für einfache 'local' Zuweisungen zur besseren Lesbarkeit.
+disable=SC2155
+
+# SC1091: "Not following: file not found"
+# Verhindert Fehler, wenn Shellcheck eine Datei im CI-Lauf nicht sofort auflösen kann.
+disable=SC1091
 
 # ──────────────────────────────────────────────────────────────
-# 4. DOKUMENTATION (LF)
+# 4. OPTIONALES TUNING (STRICT MODE)
 # ──────────────────────────────────────────────────────────────
-*.md            text eol=lf
-*.txt           text eol=lf
-LICENSE         text eol=lf
-README          text eol=lf
+
+# Aktiviere zusätzliche Prüfungen für saubereren Code
+enable=quote-safe-variables
+enable=check-unassigned-uppercase
+enable=require-variable-braces
 
 # ──────────────────────────────────────────────────────────────
-# 5. BINÄRDATEIEN (KEINE TRANSFORMATION)
+# 5. FARB-AUSGABE
 # ──────────────────────────────────────────────────────────────
-# Verhindert, dass Git versucht, Zeilenenden in Bildern oder Archiven zu "fixen".
-*.png           binary
-*.jpg           binary
-*.jpeg          binary
-*.gif           binary
-*.ico           binary
-*.webp          binary
-*.pdf           binary
-*.zip           binary
-*.7z            binary
-*.gz            binary
-*.tgz           binary
-
-# ──────────────────────────────────────────────────────────────
-# 6. WINDOWS-SPEZIFISCHE DATEIEN (CRLF)
-# ──────────────────────────────────────────────────────────────
-# Native Windows-Skripte benötigen oft CRLF, um korrekt zu funktionieren.
-*.bat           text eol=crlf
-*.ps1           text eol=crlf
+color=always

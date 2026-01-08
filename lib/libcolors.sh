@@ -1,50 +1,56 @@
 #!/usr/bin/env bash
 #
-# FILE: lib/libcolors.sh
-# ──────────────────────────────────────────────────────────────
-# ATOMARE ANSI-FARBCODES UND TEXT-ATTRIBUTE
-# ──────────────────────────────────────────────────────────────
-# Zweck:    Zentrale Definition von ANSI-Escape-Sequenzen.
-#           Dient als Datenbasis für libconstants.sh.
-# Hinweis:  Diese Bibliothek ist "source-bare" (enthält nur Variablen).
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: lib/libcolors.sh                                                    │
+# │ ZWECK: Definition atomarer ANSI-Escape-Sequenzen und Text-Attribute       │
+# │ STANDARDS: set -euo pipefail, Bash >= 4.0, Google Shell Style Guide       │
+# └───────────────────────────────────────────────────────────────────────────┘
 
-# @section Text-Attribute
-# Steuerung der Textdarstellung
-readonly ATTR_RESET='0'
-readonly ATTR_BOLD='1'
-readonly ATTR_DIM='2'
-readonly ATTR_ITALIC='3'
-readonly ATTR_UNDERLINE='4'
-readonly ATTR_BLINK='5'
-readonly ATTR_REVERSE='7'
-readonly ATTR_INVISIBLE='8'
-
-# @section Vordergrund-Farben (Standard)
-# Mapping auf COL_ Präfix für Konsistenz mit libconstants.sh
-readonly COL_BLACK='0;30'
-readonly COL_RED='0;31'
-readonly COL_GREEN='0;32'
-readonly COL_YELLOW='0;33'
-readonly COL_BLUE='0;34'
-readonly COL_MAGENTA='0;35'
-readonly COL_CYAN='0;36'
-readonly COL_WHITE='0;37'
-
-# @section Hintergrund-Farben
-# Zur Verwendung in Headern oder Statuszeilen
-readonly BG_BLACK='40'
-readonly BG_RED='41'
-readonly BG_GREEN='42'
-readonly BG_YELLOW='43'
-readonly BG_BLUE='44'
-readonly BG_MAGENTA='45'
-readonly BG_CYAN='46'
-readonly BG_WHITE='47'
+# INCLUDE GUARD
+# Verhindert mehrfaches Laden und Kollisionen mit readonly Variablen.
+[[ -n "${_LIB_COLORS_LOADED:-}" ]] && return
+readonly _LIB_COLORS_LOADED=1
 
 # @section Steuerzeichen
-# ESC-Sequenz-Begrenzer für den dynamischen Zusammenbau
-readonly ESC_START='\e['
-readonly ESC_END='m'
+# ESC-Sequenz-Begrenzer für den dynamischen Zusammenbau in libconstants.sh
+readonly UI_ESC_START='\e['
+readonly UI_ESC_END='m'
+
+# @section Text-Attribute
+# Steuerung der Formatierung (Reset, Fett, Kursiv etc.)
+readonly UI_ATTR_RESET='0'
+readonly UI_ATTR_BOLD='1'
+readonly UI_ATTR_DIM='2'
+readonly UI_ATTR_ITALIC='3'
+readonly UI_ATTR_UNDERLINE='4'
+readonly UI_ATTR_BLINK='5'
+readonly UI_ATTR_REVERSE='7'
+readonly UI_ATTR_HIDDEN='8'
+
+# @section Vordergrund-Farben
+# Standard-Farbpalette (30-37)
+readonly UI_COL_BLACK='30'
+readonly UI_COL_RED='31'
+readonly UI_COL_GREEN='32'
+readonly UI_COL_YELLOW='33'
+readonly UI_COL_BLUE='34'
+readonly UI_COL_MAGENTA='35'
+readonly UI_COL_CYAN='36'
+readonly UI_COL_WHITE='37'
+
+# @section Hintergrund-Farben
+# Hintergrund-Palette (40-47) für Statuszeilen und Header
+readonly UI_BG_BLACK='40'
+readonly UI_BG_RED='41'
+readonly UI_BG_GREEN='42'
+readonly UI_BG_YELLOW='43'
+readonly UI_BG_BLUE='44'
+readonly UI_BG_MAGENTA='45'
+readonly UI_BG_CYAN='46'
+readonly UI_BG_WHITE='47'
+
+# @section Bright-Varianten (Optionaler Bonus für Modern Terminals)
+readonly UI_COL_BRIGHT_BLACK='90'
+readonly UI_COL_BRIGHT_WHITE='97'
 
 true

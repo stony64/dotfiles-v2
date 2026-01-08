@@ -1,41 +1,45 @@
 {
-  // FILE: .markdownlint.jsonc
-  // ──────────────────────────────────────────────────────────────
-  // REGEL-DEFINITIONEN FÜR MARKDOWNLINT (v1.2.1)
-  // ──────────────────────────────────────────────────────────────
-  // Zweck:       Erzwingt ein sauberes Dokumentations-Layout.
-  // Kompatibilität: .editorconfig, markdownlint-cli2.jsonc.
-  // ──────────────────────────────────────────────────────────────
+  // ┌───────────────────────────────────────────────────────────────────────────┐
+  // │ FILE: .markdownlint.jsonc                                                 │
+  // │ ZWECK: Regel-Definitionen für konsistente Dokumentation                   │
+  // │ STANDARDS: v1.2.1, Git-Flow optimiert, Box-Header kompatibel             │
+  // └───────────────────────────────────────────────────────────────────────────┘
 
   "default": true,
 
   // MD013: Zeilenlänge deaktiviert
-  // Erlaubt fließenden Text, was Git-Diffs sauberer hält.
+  // Begründung: Moderne Editoren nutzen Soft-Wrap. Harte Umbrüche führen
+  // bei Git-Diffs oft zu unübersichtlichen Änderungen bei kleinen Wortkorrekturen.
   "MD013": false,
 
   // MD001: Überschriften-Hierarchie erzwingen (H1 -> H2 -> H3)
+  // Verhindert das Springen von Ebenen (z.B. H1 direkt auf H3).
   "MD001": true,
 
   // MD036: Kein Emphasis als Überschrift
-  // Verhindert fettgedruckte Zeilen als Header-Ersatz (dein MD036 Fix).
+  // Verhindert, dass Textzeilen nur durch Fettdruck als Header "missbraucht" werden.
   "MD036": true,
 
-  // MD024: Doppelte Überschriften nur auf gleicher Ebene verhindern
+  // MD024: Doppelte Überschriften
+  // Erlaubt identische Texte (z.B. "Konfiguration"), solange sie in
+  // unterschiedlichen Sektionen stehen (siblings_only).
   "MD024": {
     "siblings_only": true
   },
 
-  // MD025: Maximal eine H1 pro Datei (Titel der Seite)
+  // MD025: Maximal eine H1 pro Datei
+  // Die H1 dient als globaler Seitentitel. Unterthemen starten bei H2.
   "MD025": {
     "level": 1
   },
 
   // MD026: Satzzeichen am Ende von Überschriften
-  // Erlaubt Fragezeichen oder Punkte in technischen Titeln.
+  // Deaktiviert, um technische Titel wie "Setup?" oder "Status..." zu erlauben.
   "MD026": false,
 
-  // MD029: Geordnete Listen: Alle mit "1." beginnen
-  // Verhindert Re-Nummerierungs-Chaos bei Verschiebungen im Git.
+  // MD029: Geordnete Listen
+  // Stil "ordered" erzwingt "1. 2. 3.".
+  // Hinweis: Falls du automatische Nummerierung bevorzugst, wäre "one" (nur 1.) besser.
   "MD029": {
     "style": "ordered"
   },
@@ -46,25 +50,24 @@
     "indent": 4
   },
 
-  // MD031: Leerzeilen um Codeblöcke erzwingen
+  // MD031 & MD022: Vertikaler Whitespace
+  // Erzwingt Leerzeilen um Codeblöcke und Überschriften für bessere Lesbarkeit.
   "MD031": true,
-
-  // MD022: Leerzeilen um Überschriften erzwingen
   "MD022": true,
 
   // MD009: Abschließende Leerzeichen erlauben
-  // Notwendig für harte Zeilenumbrüche (Double Space) in Markdown.
+  // Deaktiviert, da Markdown zwei Leerzeichen am Ende für Zeilenumbrüche nutzt.
   "MD009": false,
 
   // MD040: Codeblöcke: Sprache verpflichtend
-  // Sorgt für korrektes Syntax-Highlighting (bash, json, etc.).
+  // Verhindert "nackte" Codeblöcke ohne Syntax-Highlighting-Indikator.
   "MD040": true,
 
   // MD033: Inline HTML erlauben
-  // Erforderlich für die Box-Header-Elemente in deinen Docs.
+  // Deaktiviert, damit deine Box-Header (HTML-Kommentare oder Divs) nicht angemeckert werden.
   "MD033": false,
 
   // MD041: Erste Zeile muss keine H1 sein
-  // Erlaubt das Platzieren deiner Box-Header am Dateianfang.
+  // Erlaubt es, Lizenz-Header oder Box-Deklarationen vor den eigentlichen Titel zu setzen.
   "MD041": false
 }

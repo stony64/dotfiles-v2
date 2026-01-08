@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 #
-# FILE: home/.bashexports
-# ──────────────────────────────────────────────────────────────
-# GLOBALE UMGEBUNGSVARIABLEN FÜR TOOLS UND EDITOREN
-# ──────────────────────────────────────────────────────────────
-# Zweck:    Konfiguration von Standard-Editoren, Pagern und Locales.
-#           Steuert das Verhalten von Drittanbieter-Anwendungen.
-# Abhängigkeiten: .bashenv (für $PLATFORM).
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: home/.bashexports                                                   │
+# │ ZWECK: Globale Umgebungsvariablen für Tools, Editoren und Locales         │
+# │ STANDARDS: Bash >= 4.0, Google Shell Style Guide                          │
+# └───────────────────────────────────────────────────────────────────────────┘
 
-# @section 1. Standard-Editor & Pager
-# Festlegung der Standard-Werkzeuge für Textbearbeitung und Ansicht.
-if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-    # Dynamische Editor-Wahl unter Linux (Priorität: micro > nano > vi)
+# ──────────────────────────────────────────────────────────────
+# 1. STANDARD-EDITOR & VISUAL
+# ──────────────────────────────────────────────────────────────
+# Bestimmt, welcher Editor bei Befehlen wie 'git commit' geöffnet wird.
+
+if [[ "${PLATFORM:-}" == "linux" ]]; then
+    # Priorität Linux: micro (modern) > nano (standard) > vi (fallback)
     if command -v micro >/dev/null 2>&1; then
         export EDITOR="micro"
     elif command -v nano >/dev/null 2>&1; then
@@ -21,40 +21,64 @@ if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
         export EDITOR="vi"
     fi
 else
-    # Windows-Spezifische Editoren (Git Bash / MSYS2 Pfade)
-    # Bevorzugt Notepad++ oder VS Code, falls im PATH vorhanden
-    if command -v notepad++.exe >/dev/null 2>&1; then
+    # Windows/Git-Bash: Integration nativer Windows-Editoren
+    if command -v code >/dev/null 2>&1; then
+        # VS Code im Wait-Modus für Git/CLI-Integration
+        export EDITOR="code --wait"
+    elif command -v notepad++.exe >/dev/null 2>&1; then
         export EDITOR="notepad++.exe -multiInst -notabbar -nosession"
-    elif [[ -f "/c/Program Files/Notepad++/notepad++.exe" ]]; then
-        export EDITOR="'/c/Program Files/Notepad++/notepad++.exe' -multiInst -notabbar -nosession"
     else
         export EDITOR="notepad.exe"
     fi
 fi
 
-# VISUAL wird für Editoren genutzt, die eine UI/Vollbild benötigen
 export VISUAL="$EDITOR"
+
+# ──────────────────────────────────────────────────────────────
+# 2. PAGER & VIEWING
+# ──────────────────────────────────────────────────────────────
+
 export PAGER="less"
 
-# LESS-Optionen:
-# -R: Interpretiert ANSI-Farbcodes korrekt (wichtig für farbige Logs/Diffs)
-# -F: Beendet less automatisch, wenn der Inhalt auf einen Schirm passt
-# -X: Verhindert das Löschen des Inhalts vom Schirm nach dem Beenden
+# LESS-Flags:
+# -R: ANSI-Farben beibehalten (essentiell für farbige Logs)
+# -F: Beenden, wenn Inhalt auf eine Seite passt (identisch zu 'cat')
+# -X: Inhalt nach Beenden im Terminal-Buffer stehen lassen
 export LESS="-RFX"
 
-# @section 2. Sprache / Zeichensatz (Locale)
-# Sicherstellung einer korrekten Darstellung von Umlauten.
-if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-    # v1.2.1 Standard: C.UTF-8 ist universell auf Linux-Systemen vorhanden
+# ──────────────────────────────────────────────────────────────
+# 3. SPRACHE & LOCALES (v1.2.1 STANDARD)
+# ──────────────────────────────────────────────────────────────
+# Erzwingt UTF-8, um Probleme mit Umlauten und Sonderzeichen zu vermeiden.
+
+if [[ "${PLATFORM:-}" == "linux" ]]; then
+    # C.UTF-8 ist der schlanke Standard für Server und Container
     export LANG="C.UTF-8"
     export LC_ALL="C.UTF-8"
 else
+    # Windows Git-Bash nutzt oft en_US für Systemnachrichten
     export LANG="en_US.UTF-8"
     export LC_ALL="en_US.UTF-8"
 fi
 
-# @section 3. Lokale Erweiterungen
-# Ermöglicht systemspezifische Exporte (z.B. API-Keys), die nicht im Repo landen.
+# ──────────────────────────────────────────────────────────────
+# 4. TOOL-SPEZIFISCHE EXPORTE
+# ──────────────────────────────────────────────────────────────
+
+# GPG-Signing für Git (falls vorhanden)
+if command -v gpg >/dev/null 2>&1; then
+    export GPG_TTY=$(tty)
+fi
+
+# Verhindert, dass Node.js/npm bei Fehlern das Terminal mit Stacktraces flutet
+export NODE_OPTIONS="--no-warnings"
+
+# ──────────────────────────────────────────────────────────────
+# 5. LOKALE ERWEITERUNGEN
+# ──────────────────────────────────────────────────────────────
+# Hier können API-Keys (z.B. GITHUB_TOKEN) oder Host-spezifische
+# Variablen definiert werden, ohne sie ins öffentliche Repo zu pushen.
+
 if [[ -f "$HOME/.bash_exports_local" ]]; then
     # shellcheck disable=SC1091
     source "$HOME/.bash_exports_local"

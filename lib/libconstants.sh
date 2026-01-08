@@ -1,56 +1,61 @@
 #!/usr/bin/env bash
 #
-# FILE: lib/libconstants.sh
-# ──────────────────────────────────────────────────────────────
-# ZENTRALE KONFIGURATION UND DATENMODELL (v1.2.1)
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: lib/libconstants.sh                                                 │
+# │ ZWECK: Zentrale Konfiguration, UI-Definitionen und Datenmodell            │
+# │ STANDARDS: set -euo pipefail, Bash >= 4.0, Google Shell Style Guide       │
+# └───────────────────────────────────────────────────────────────────────────┘
 
-# 1. INCLUDE GUARD (Verhindert "readonly variable" Fehler bei Double-Sourcing)
+# INCLUDE GUARD
 [[ -n "${_LIB_CONSTANTS_LOADED:-}" ]] && return
 readonly _LIB_CONSTANTS_LOADED=1
 
-# 2. LOCALE FIX (Verhindert setlocale Warnungen in Test-Umgebungen)
+# 1. LOCALE FIX
+# Erzwingt UTF-8 für konsistente Symbol-Darstellung und Sortierung.
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
 
-# @section Exit Codes
+# 2. EXIT CODES
 readonly EXIT_OK=0
 readonly EXIT_FATAL=1
 readonly EXIT_WARN=2
 
-# @section UI / Symbole (ASCII-safe)
-readonly SYMBOL_OK="[ OK ]"
-readonly SYMBOL_ERROR="[  X  ]"
-readonly SYMBOL_WARN="[  i  ]"
+# 3. UI / SYMBOLE
+# ASCII-Fallback-fähig, aber für moderne Terminals optimiert.
+readonly SYMBOL_OK="✔"
+readonly SYMBOL_ERROR="✘"
+readonly SYMBOL_WARN="⚠"
+readonly SYMBOL_INFO="ℹ"
 
-# @section CLI-Farben (Finalisierte Sequenzen)
-# HINWEIS: Wir nutzen hier UI_ Präfixe, um Konflikte mit libcolors.sh
-# (den Rohdaten) zu vermeiden und das "readonly" Problem zu lösen.
-readonly UI_COL_RED="${ESC_START}${COL_RED}${ESC_END}"
-readonly UI_COL_GREEN="${ESC_START}${COL_GREEN}${ESC_END}"
-readonly UI_COL_YELLOW="${ESC_START}${COL_YELLOW}${ESC_END}"
-readonly UI_COL_BLUE="${ESC_START}${COL_BLUE}${ESC_END}"
-readonly UI_COL_MAGENTA="${ESC_START}${COL_MAGENTA}${ESC_END}"
-readonly UI_COL_CYAN="${ESC_START}${COL_CYAN}${ESC_END}"
-readonly UI_COL_RESET="${ESC_START}${ATTR_RESET}${ESC_END}"
+# 4. CLI-FARBEN (Zusammengesetzt aus libcolors.sh)
+# Wir nutzen die atomaren Werte aus libcolors.sh, um finale Sequenzen zu bilden.
+# Fallback auf leere Strings, falls libcolors.sh nicht geladen ist.
+readonly UI_COL_RED="${UI_ESC_START:-}${UI_COL_RED:-}${UI_ESC_END:-}"
+readonly UI_COL_GREEN="${UI_ESC_START:-}${UI_COL_GREEN:-}${UI_ESC_END:-}"
+readonly UI_COL_YELLOW="${UI_ESC_START:-}${UI_COL_YELLOW:-}${UI_ESC_END:-}"
+readonly UI_COL_BLUE="${UI_ESC_START:-}${UI_COL_BLUE:-}${UI_ESC_END:-}"
+readonly UI_COL_MAGENTA="${UI_ESC_START:-}${UI_COL_MAGENTA:-}${UI_ESC_END:-}"
+readonly UI_COL_CYAN="${UI_ESC_START:-}${UI_COL_CYAN:-}${UI_ESC_END:-}"
+readonly UI_COL_WHITE="${UI_ESC_START:-}${UI_COL_WHITE:-}${UI_ESC_END:-}"
+readonly UI_COL_RESET="${UI_ESC_START:-}${UI_ATTR_RESET:-}${UI_ESC_END:-}"
 
-# @section Log-Formatierung
-readonly LOG_PREFIX_INFO="${UI_COL_GREEN}${SYMBOL_OK}${UI_COL_RESET}"
+# 5. TEXT-STILE
+readonly UI_ATTR_BOLD="${UI_ESC_START:-}${UI_ATTR_BOLD:-}${UI_ESC_END:-}"
+readonly UI_ATTR_DIM="${UI_ESC_START:-}${UI_ATTR_DIM:-}${UI_ESC_END:-}"
+readonly UI_ATTR_UNDERLINE="${UI_ESC_START:-}${UI_ATTR_UNDERLINE:-}${UI_ESC_END:-}"
+
+# 6. LOG-FORMATIERUNG (Zusammengesetzte Präfixe)
+readonly LOG_PREFIX_INFO="${UI_COL_CYAN}${SYMBOL_INFO}${UI_COL_RESET}"
+readonly LOG_PREFIX_SUCCESS="${UI_COL_GREEN}${SYMBOL_OK}${UI_COL_RESET}"
 readonly LOG_PREFIX_WARN="${UI_COL_YELLOW}${SYMBOL_WARN}${UI_COL_RESET}"
 readonly LOG_PREFIX_ERROR="${UI_COL_RED}${SYMBOL_ERROR}${UI_COL_RESET}"
 
-# @section Erweiterte Stile
-readonly STYLE_BOLD="${ESC_START}${ATTR_BOLD}${ESC_END}"
-readonly STYLE_DIM="${ESC_START}${ATTR_DIM}${ESC_END}"
-readonly STYLE_BOLD_YELLOW="${ESC_START}${ATTR_BOLD};33${ESC_END}"
-readonly STYLE_UNDERLINE_GREEN="${ESC_START}${ATTR_UNDERLINE};32${ESC_END}"
-readonly STYLE_HEADER_BG="${ESC_START}${ATTR_BOLD};${BG_BLUE};33${ESC_END}"
-
-# @section Pfade & Repo-Struktur
+# 7. PFADE & REPO-STRUKTUR
 readonly REPO_HOME_DIR="home"
 readonly REPO_CONFIG_DIR="config"
 
-# @section Home-Dotfiles (Symlink Whitelist)
+# 8. DOTFILES_WHITELIST (Symlink-Zielobjekte)
+# Dateien innerhalb von /home im Repo, die nach $HOME gelinkt werden.
 readonly DOTFILES_WHITELIST=(
     ".bashrc"
     ".bashexports"
@@ -62,15 +67,15 @@ readonly DOTFILES_WHITELIST=(
     ".nanorc"
 )
 
-# @section Shell-Verhalten
-readonly SHELL_TMOUT_SSH=0
-readonly HIST_SIZE_INTERNAL=8192
-readonly HIST_FILE_SIZE_INTERNAL=16384
-
-# @section Runtime-Configs (Copy Whitelist)
+# 9. RUNTIME_CONFIGS (Directory Copy Whitelist)
+# Verzeichnisse aus /config, die nach $XDG_CONFIG_HOME kopiert werden.
 readonly RUNTIME_CONFIGS=(
     "mc"
     "micro"
 )
+
+# 10. SYSTEM-CONSTANTS
+readonly HIST_SIZE_INTERNAL=8192
+readonly HIST_FILE_SIZE_INTERNAL=16384
 
 true

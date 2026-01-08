@@ -1,99 +1,121 @@
 #!/usr/bin/env bash
 #
-# FILE: test_suite.sh
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: test_suite.sh                                                       │
+# │ ZWECK: Automatisierte Validierung der Projekt-Integrität und Standards    │
+# │ STANDARDS: set -euo pipefail, Bash >= 4.0, Modulares Design               │
+# └───────────────────────────────────────────────────────────────────────────┘
+
+set -euo pipefail
+
 # ──────────────────────────────────────────────────────────────
-# AUTOMATISIERTE VALIDIERUNG (v1.2.1)
-# ──────────────────────────────────────────────────────────────
-# Zweck:       Prüft die Integrität der Dotfiles und Skripte.
-#              Stellt sicher, dass v1.2.1 Standards eingehalten werden.
+# 1. INITIALISIERUNG & BOOTSTRAP
 # ──────────────────────────────────────────────────────────────
 
-# 1. Globale Einstellungen (Sicherheit geht vor)
-set -o errexit  # Abbruch bei Fehlern
-set -o nounset  # Abbruch bei nicht definierten Variablen (unbound variable fix)
-set -o pipefail # Fehler in Pipes erkennen
+# Ermittlung des absoluten Pfads für zuverlässige Testläufe
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO_ROOT"
 
-# 2. Umgebung fixen (Locale & Pfade)
+# Lokalisierung fixen
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
-export PATH="$(pwd):$PATH"
 
-# 3. Bibliotheken laden
-# Wichtig: Die Reihenfolge muss stimmen (Basis -> Konstanten)
+# Basis-Bibliotheken für Test-Infrastruktur laden
 LIB_DIR="./lib"
 if [[ -f "$LIB_DIR/libcolors.sh" && -f "$LIB_DIR/libconstants.sh" ]]; then
+    # shellcheck disable=SC1090
     source "$LIB_DIR/libcolors.sh"
+    # shellcheck disable=SC1090
     source "$LIB_DIR/libconstants.sh"
 else
-    echo "[!] Fehler: Bibliotheken in $LIB_DIR nicht gefunden."
+    echo -e "\e[31m[!] Kritisch: Test-Abhängigkeiten in $LIB_DIR nicht gefunden.\e[0m" >&2
     exit 1
 fi
 
 # ──────────────────────────────────────────────────────────────
-# TEST-FUNKTIONEN
+# 2. TEST-HILFSFUNKTIONEN
 # ──────────────────────────────────────────────────────────────
 
-log_test() {
+# @description Formatiert Test-Ergebnisse konsistent.
+# @param $1 Exit-Code des Tests, $2 Beschreibung.
+log_test_result() {
     local status=$1
     local message=$2
     if [[ "$status" -eq 0 ]]; then
-        echo -e "${UI_COL_GREEN}${SYMBOL_OK}${UI_COL_RESET} $message"
+        echo -e "    ${UI_COL_GREEN:-}${SYMBOL_OK:-}${UI_COL_RESET:-} $message"
     else
-        echo -e "${UI_COL_RED}${SYMBOL_ERROR}${UI_COL_RESET} $message"
+        echo -e "    ${UI_COL_RED:-}${SYMBOL_ERROR:-}${UI_COL_RESET:-} $message"
         return 1
     fi
 }
 
-# @test: Prüfung der Repository-Struktur
+# ──────────────────────────────────────────────────────────────
+# 3. TEST-DEFINITIONEN
+# ──────────────────────────────────────────────────────────────
+
+# @test Validiert die physische Struktur des Repositories.
 test_structure() {
-    echo -e "\n${STYLE_BOLD}>>> Test 1: Verzeichnis-Struktur${UI_COL_RESET}"
-    [[ -d "home" ]] && log_test 0 "home/ Verzeichnis existiert."
-    [[ -d "lib" ]]  && log_test 0 "lib/ Verzeichnis existiert."
-    [[ -f "dotfilesctl.sh" ]] && log_test 0 "Controller-Skript vorhanden."
+    echo -e "\n${UI_ATTR_BOLD:-}>>> Test 1: Verzeichnis-Struktur${UI_COL_RESET:-}"
+    local err=0
+    [[ -d "home" ]] || { log_test_result 1 "home/ fehlt"; err=1; }
+    [[ -d "lib" ]] || { log_test_result 1 "lib/ fehlt"; err=1; }
+    [[ -f "dotfilesctl.sh" ]] || { log_test_result 1 "dotfilesctl.sh fehlt"; err=1; }
+
+    [[ $err -eq 0 ]] && log_test_result 0 "Repository-Struktur ist integer."
+    return $err
 }
 
-# @test: Prüfung der Bibliotheken (Double-Sourcing Test)
+# @test Prüft die Integrität der Bibliotheken (Include-Guards & Namespace).
 test_libraries() {
-    echo -e "\n${STYLE_BOLD}>>> Test 2: Bibliotheken & Namespace${UI_COL_RESET}"
-    # Versuche Double-Sourcing (darf dank Include-Guard nicht crashen)
-    if source "$LIB_DIR/libconstants.sh"; then
-        log_test 0 "Library Include-Guards arbeiten korrekt (keine Redefinition)."
-    fi
-    [[ -n "${UI_COL_RED:-}" ]] && log_test 0 "Namespace UI_COL_ korrekt initialisiert."
-}
+    echo -e "\n${UI_ATTR_BOLD:-}>>> Test 2: Bibliotheken & Namespace${UI_COL_RESET:-}"
 
-# @test: Doctor-Kommando des Controllers
-test_controller_doctor() {
-    echo -e "\n${STYLE_BOLD}>>> Test 3: Controller Logik (Doctor)${UI_COL_RESET}"
-    if ./dotfilesctl.sh doctor > /dev/null 2>&1; then
-        log_test 0 "Command 'doctor' liefert EXIT_OK."
+    # Test auf Double-Sourcing (Darf keine 'readonly variable' Fehler werfen)
+    if ( source "$LIB_DIR/libconstants.sh" && source "$LIB_DIR/libconstants.sh" ) 2>/dev/null; then
+        log_test_result 0 "Include-Guards verhindern Redefinition erfolgreich."
     else
-        log_test 1 "Command 'doctor' fehlgeschlagen."
+        log_test_result 1 "Include-Guard Fehler oder Kollision bei Double-Sourcing."
+        return 1
+    fi
+
+    # Namespace Check
+    [[ -n "${UI_COL_RED:-}" ]] && log_test_result 0 "Namespace UI_COL_* ist korrekt geladen."
+}
+
+# @test Führt eine Trockenübung des Controllers aus.
+test_controller_dry_run() {
+    echo -e "\n${UI_ATTR_BOLD:-}>>> Test 3: Controller-Integration (Dry-Run)${UI_COL_RESET:-}"
+
+    if ./dotfilesctl.sh doctor --dry-run > /dev/null 2>&1; then
+        log_test_result 0 "Controller 'doctor' Lauf erfolgreich simuliert."
+    else
+        log_test_result 1 "Controller 'doctor' meldet Fehler (Check Log!)."
+        return 1
     fi
 }
 
 # ──────────────────────────────────────────────────────────────
-# HAUPT-EXECUTION
+# 4. EXECUTION
 # ──────────────────────────────────────────────────────────────
 
-echo -e "${STYLE_HEADER_BG}   DOTFILES v1.2.1 VALIDIERUNG   ${UI_COL_RESET}"
-echo -e "Datum: $(date '+%Y-%m-%d %H:%M:%S')"
-echo -e "System: $PLATFORM"
+echo -e "${UI_ATTR_BOLD:-}${UI_COL_WHITE:-}${UI_BG_BLUE:-}   DOTFILES v1.2.1 - AUTOMATED TEST SUITE   ${UI_COL_RESET:-}"
+echo -e "Laufzeit: $(date '+%Y-%m-%d %H:%M:%S')"
+echo -e "OS:       $(uname -s)"
+echo -e "──────────────────────────────────────────────────────────────"
 
-# Tests in Subshell ausführen, um Haupt-Shell sauber zu halten
-(
-    test_structure
-    test_libraries
-    test_controller_doctor
-)
+# Gesamtzähler für fehlgeschlagene Tests
+FAILED_TESTS=0
 
-TEST_RESULT=$?
+# Ausführung der Testblöcke
+test_structure || ((FAILED_TESTS++))
+test_libraries || ((FAILED_TESTS++))
+test_controller_dry_run || ((FAILED_TESTS++))
 
 echo -e "\n──────────────────────────────────────────────────────────────"
-if [[ $TEST_RESULT -eq 0 ]]; then
-    echo -e "${UI_COL_GREEN}ERGEBNIS: Alle Tests erfolgreich bestanden!${UI_COL_RESET}"
-    exit 0
+
+if [[ $FAILED_TESTS -eq 0 ]]; then
+    echo -e "${UI_COL_GREEN:-}${UI_ATTR_BOLD:-}ERGEBNIS: Alle Validierungen erfolgreich bestanden!${UI_COL_RESET:-}"
+    exit "${EXIT_OK:-0}"
 else
-    echo -e "${UI_COL_RED}ERGEBNIS: Validierung fehlgeschlagen.${UI_COL_RESET}"
-    exit 1
+    echo -e "${UI_COL_RED:-}${UI_ATTR_BOLD:-}ERGEBNIS: Validierung fehlgeschlagen ($FAILED_TESTS Fehler).${UI_COL_RESET:-}"
+    exit "${EXIT_FATAL:-1}"
 fi

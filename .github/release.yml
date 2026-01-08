@@ -1,10 +1,8 @@
-# FILE: .github/workflows/release.yml
-# ──────────────────────────────────────────────────────────────
-# GITHUB ACTION: AUTOMATED RELEASE (v1.2.1)
-# ──────────────────────────────────────────────────────────────
-# Zweck:       Validiert den Code (Linting & Tests) und erstellt
-#              bei erfolgreichem v*-Tag ein GitHub Release.
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: .github/workflows/release.yml                                       │
+# │ ZWECK: Automatisierte Validierung und Veröffentlichung (v1.2.1)           │
+# │ FLOW: Trigger auf v*-Tags -> ShellCheck -> Sandbox Tests -> Release       │
+# └───────────────────────────────────────────────────────────────────────────┘
 
 name: Create Release
 
@@ -21,22 +19,22 @@ jobs:
     name: Validate Scripts
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: ShellCheck
+      - name: 🔍 ShellCheck (Static Analysis)
         uses: ludeeus/action-shellcheck@master
         with:
-          # Scannt das Root-Verzeichnis und deine Bibliotheken
+          # Scannt das Root-Verzeichnis und deine Bibliotheken (lib/)
           scandir: '.'
-          # Nutzt deine .shellcheckrc Konfiguration
+          # Nutzt deine .shellcheckrc für projektspezifische Ausnahmen
           ignore: 'node_modules'
 
-      - name: Run Test Suite
+      - name: 🧪 Run Test Suite (Functional Sandbox)
         run: |
-          # Setzt Ausführungsrechte für den CI-Lauf
+          # Erzwinge Ausführungsrechte für die CI-Umgebung
           chmod +x dotfilesctl.sh test_suite.sh lib/*.sh
-          # Führt die Sandbox-Tests aus
+          # Führt die funktionale Validierung aus
           ./test_suite.sh
 
   # ──────────────────────────────────────────────────────────────
@@ -47,29 +45,37 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Erforderlich zum Erstellen von Releases
 
     steps:
-      - name: Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Holt die gesamte Historie für korrekte Changelogs
 
-      - name: Create Release
+      - name: 🚀 Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: |
-            ## Dotfiles v1.2.1
-            Automatisches Release der Plattform-unabhängigen Dotfiles.
+            ## 🛠 Dotfiles Framework v1.2.1
 
-            ### Änderungen
-            - Vollständige Modularisierung (lib/ Struktur)
-            - Native Windows Symlink Unterstützung
-            - Integrierte Health-Checks (dctl doctor)
+            Dieses Release markiert den stabilen Meilenstein der modularen Architektur.
+            Optimiert für **Linux (Ubuntu/Debian)** und **Windows (Git Bash/MSYS2)**.
+
+            ### ✨ Highlights dieses Releases:
+            - **Modulare Engine:** Klare Trennung von Logik (`lib/`) und Konfiguration (`home/`).
+            - **Plattform-Agnostik:** Intelligente Pfad- und Symlink-Behandlung für NTFS/Unix.
+            - **Quality Assurance:** Integrierte ShellCheck-Validierung und Sandbox-Tests.
+            - **Dotfiles Control:** Erweiterter `doctor`-Befehl für Integritätsprüfung.
+
+            ---
+            *Automatisches Release generiert durch GitHub Actions.*
           generate_release_notes: true
           draft: false
           prerelease: false
-          # Wir listen hier keine einzelnen Dateien, da das Repo-Zip
-          # bereits alles enthält. LICENSE und README sind dort inkludiert.
+
+      - name: ✅ Final Status
+        if: success()
+        run: echo "Release ${{ github.ref_name }} successfully published!"

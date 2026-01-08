@@ -1,72 +1,79 @@
 #
-# FILE: home/.nanorc
-# ──────────────────────────────────────────────────────────────
-# GNU NANO KONFIGURATION (v1.2.1)
-# ──────────────────────────────────────────────────────────────
-# Zweck:       Modernisierung der Steuerung und visuelle Optimierung.
-# Kompatibilität: Linux (Bash/Zsh) & Windows (Git Bash).
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: home/.nanorc                                                        │
+# │ ZWECK: Modernisierung von GNU Nano                                        │
+# │ STANDARDS: Plattformübergreifend (Linux & Git Bash), Modern Bindings      │
+# └───────────────────────────────────────────────────────────────────────────┘
 
 # ──────────────────────────────────────────────────────────────
 # 1. EDITOR-VERHALTEN & FORMATIERUNG
 # ──────────────────────────────────────────────────────────────
-set autoindent          # Einrückung beibehalten
-set tabsize 4           # Synchron zu .editorconfig
-set tabstospaces        # Leerzeichen statt Hard-Tabs
-set softwrap            # Zeilenumbruch nur visuell
-set atblanks            # Umbruch an Wortgrenzen
-set zap                 # Backspace löscht markierte Blöcke
+set autoindent          # Einrückung der Vorzeile beibehalten
+set tabsize 4           # Konsistent zu .editorconfig
+set tabstospaces        # Leerzeichen statt Hard-Tabs (verhindert Diff-Chaos)
+set softwrap            # Zeilenumbruch visuell (kein harter Break)
+set atblanks            # Umbruch nur an Wortgrenzen (bessere Lesbarkeit)
+set zap                 # Backspace löscht markierte Blöcke sofort
 set noconvert           # Zeilenenden (LF/CRLF) beim Öffnen respektieren
-set magic               # Erweiterte Dateityperkennung
-set locking             # Schreibschutz-Dateien (.swp) aktivieren
+set magic               # Erweiterte Dateityperkennung aktivieren
+set locking             # Datei-Locking (.swp) zur Vermeidung von Edit-Konflikten
 
 # ──────────────────────────────────────────────────────────────
 # 2. INTERFACE (UI) & VISUALS
 # ──────────────────────────────────────────────────────────────
-set linenumbers         # Zeilennummern einblenden
-set constantshow        # Cursor-Position permanent anzeigen
-set indicator           # Scrollbar anzeigen
-set minibar             # Kompakte Statusleiste (mehr Platz für Code)
-set stateflags          # Zeigt Speichermodus und Modifikationen an
-set showcursor          # Cursor auch in Menüs sichtbar
+set linenumbers         # Zeilennummern für effizientes Debugging
+set constantshow        # Cursor-Position permanent in Statuszeile
+set indicator           # Scroll-Indikator am rechten Rand
+set minibar             # Kompakte Statuszeile (maximiert Editier-Fläche)
+set stateflags          # Zeigt [Modifiziert], [Speichern] etc. oben rechts
+set showcursor          # Cursor auch in Menüs/Hilfe sichtbar lassen
 
 # ──────────────────────────────────────────────────────────────
 # 3. HISTORIE & POSITIONIERUNG
 # ──────────────────────────────────────────────────────────────
-set historylog          # Such-Historie speichern
-set positionlog         # Letzte Cursor-Position beim Öffnen wiederherstellen
+set historylog          # Such- und Befehlshistorie dauerhaft speichern
+set positionlog         # Letzte Cursor-Position beim Wiederöffnen laden
 
 # ──────────────────────────────────────────────────────────────
 # 4. SYNTAX-HIGHLIGHTING (PLATFORM-AWARE)
 # ──────────────────────────────────────────────────────────────
-# Versucht die Standardpfade für Linux und Git Bash einzubinden.
+# Inkludiert verfügbare Syntax-Definitionen für verschiedene Umgebungen.
+
+# Standardpfad (Linux/Debian/Ubuntu)
 include "/usr/share/nano/*.nanorc"
 include "/usr/share/nano-syntax-highlighting/*.nanorc"
-# Git Bash spezifisch
+
+# Git Bash / MSYS2 spezifisch
 include "/etc/nanorc"
+
+# Lokale Erweiterungen (falls vorhanden)
+include "~/.nano/*.nanorc"
 
 # ──────────────────────────────────────────────────────────────
 # 5. MODERN BINDINGS (SHORTCUTS)
 # ──────────────────────────────────────────────────────────────
-# WICHTIG: Erfordert 'stty -ixon' in der .bashrc für ^S/^Q Support.
+# Ermöglicht intuitive Steuerung (Windows-Standard / Common Shortcuts).
+# WICHTIG: Erfordert 'stty -ixon' in der .bashrc.
 
-bind M-C copy main           # Alt+C: Kopieren
-bind M-V paste all          # Alt+V: Einfügen
-bind ^F whereis all         # Ctrl+F: Suchen
-bind ^H replace main        # Ctrl+H: Ersetzen
-bind ^S savefile main       # Ctrl+S: Schnellspeichern
-bind ^Q exit all            # Ctrl+Q: Beenden
-bind ^Z undo main           # Ctrl+Z: Rückgängig
-bind ^Y redo main           # Ctrl+Y: Wiederholen
-bind ^D zap main            # Ctrl+D: Zeichen/Block löschen (ohne Cut)
+bind M-C copy main           # Alt+C: Kopieren (nach Markierung mit M-A)
+bind M-V paste all           # Alt+V: Einfügen
+bind ^F whereis all          # Ctrl+F: Suchen (statt Ctrl+W)
+bind ^H replace main         # Ctrl+H: Ersetzen (statt Ctrl+\)
+bind ^S savefile main        # Ctrl+S: Schnellspeichern (ohne Exit)
+bind ^Q exit all             # Ctrl+Q: Beenden (statt Ctrl+X)
+bind ^Z undo main            # Ctrl+Z: Rückgängig
+bind ^Y redo main            # Ctrl+Y: Wiederholen
+bind ^D zap main             # Ctrl+D: Zeichen/Block löschen (ohne Cut-Buffer)
 
 # ──────────────────────────────────────────────────────────────
-# 6. DESIGN (FARBSCHEMA)
+# 6. DESIGN (FARBSCHEMA v1.2.1)
 # ──────────────────────────────────────────────────────────────
-# Farblich abgestimmt auf libcolors.sh
-set titlecolor black,cyan
-set statuscolor black,cyan
-set keycolor white,blue
-set numbercolor yellow,normal
-set errorcolor white,red
-set selectedcolor black,white
+# Harmonisiert mit dem UI-Konzept aus libcolors.sh
+
+set titlecolor black,cyan     # Kopfzeile (Dezent/Professionell)
+set statuscolor black,cyan    # Statusleiste unten
+set keycolor white,blue       # Shortcut-Tasten in der Hilfe
+set numbercolor yellow,normal # Zeilennummern (Gelb für Fokus)
+set errorcolor white,red      # Fehlermeldungen (Klassisches Warnrot)
+set selectedcolor black,white # Markierter Text (Invertiert)
+set stripecolor ,yellow       # (Optional) Markierung der 80-Zeichen Grenze

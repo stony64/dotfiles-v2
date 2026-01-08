@@ -1,69 +1,68 @@
-# General Project Styleguide (v1.2.1)
+# 🌐 General Project Styleguide (v1.2.1)
 
-Dieser Guide definiert die projektweiten Standards für Architektur, Dateiorganisation und Dokumentation. Er dient als Grundlage für die Konsistenz des gesamten Dotfiles-Ökosystems.
+Dieser Guide definiert die projektweiten Standards für Architektur, Dateiorganisation und Dokumentation. Er bildet das Fundament für die Konsistenz und Wartbarkeit des gesamten Dotfiles-Ökosystems.
 
 ---
 
 ## 1. Architektur-Philosophie
 
-Das Projekt folgt drei Kernprinzipien:
+Das Framework folgt drei Kernprinzipien für professionelle Systemadministration:
 
-1. **Modularität:** Logik wird strikt in Bibliotheken (`lib/`) und ausführbare Skripte getrennt. Kein Skript sollte Logik enthalten, die auch an anderer Stelle nützlich sein könnte.
-2. **Plattform-Abstraktion:** Betriebssystem-Unterschiede werden so früh wie möglich abgefangen (in der `libplatform_*.sh`) und in abstrakte Befehle übersetzt.
-3. **Zustandslosigkeit & Idempotenz:** Jede Operation (Installation, Löschung) muss beliebig oft hintereinander ausführbar sein, ohne das System in einen instabilen Zustand zu bringen.
+1. **Strikte Modularität:** Logik wird konsequent in Bibliotheken (`lib/`) gekapselt. Ausführbare Skripte (Entrypoints) dienen lediglich als Orchestratoren und enthalten keine wiederverwendbare Geschäftslogik.
+2. **Plattform-Abstraktion:** Betriebssystem-Unterschiede werden exklusiv in der `libplatform_*.sh` behandelt. Der Rest des Codes nutzt abstrakte Funktionen, um unabhängig vom OS zu agieren.
+3. **Idempotenz:** Jede Operation (Installation, Update, Deinstallation) muss ohne Seiteneffekte beliebig oft wiederholbar sein. Der Zielzustand ist definiert; der Weg dorthin ist sicher.
 
 ## 2. Verzeichnisstruktur
 
-Die Struktur ist flach und zweckorientiert:
+Die Struktur ist flach, intuitiv und skalierbar:
 
-- **`/home`**: Enthält die Rohdateien (Dotfiles), die als Symlinks in das `$HOME` des Nutzers gespiegelt werden.
-- **`/lib`**: Das Gehirn des Projekts. Enthält Module wie `libengine.sh`, `libconstants.sh` und `libplatform_*.sh`. Nur Funktionen, keine direkten Befehle.
-- **`/docs`**: Markdown-Dokumentation für Menschen.
-- **Root (`/`)**: Nur die Haupt-Entrypoints (`dotfilesctl.sh`, `test_suite.sh`) und Projektmetadaten.
+* **`/home`**: Die "Payload". Enthält die Rohdateien, die als Symlinks in das `$HOME` des Nutzers gespiegelt werden.
+* **`/lib`**: Das "Gehirn". Enthält funktionale Module. **Wichtig:** Libs dürfen nur Funktionen definieren, aber keine Befehle direkt beim Laden ausführen.
+* **`/docs`**: Wissenstransfer. Markdown-Dokumentation für Anwender und Entwickler.
+* **Root (`/`)**: Nur primäre Entrypoints (`dotfilesctl.sh`, `test_suite.sh`) und Konfigurations-Metadaten (`.editorconfig`, `.gitattributes`).
 
-## 3. Dokumentations-Standards (Markdown)
+## 3. Dokumentations-Standards
 
-Alle `.md`-Dateien müssen folgenden Regeln entsprechen:
+Qualitativ hochwertige Dokumentation ist Teil des Produkts, nicht nur ein Beiwerk:
 
-- **Sprache:** Deutsch (für Kommentare im Code und Anleitungen), Fachbegriffe bleiben Englisch.
-- **Hierarchie:** Konsistente Nutzung von Überschriften (`#`, `##`, `###`).
-- **Code-Blöcke:** Immer mit Sprach-Syntax-Highlighting versehen (z. B. ` ```bash `).
-- **Dateipfade:** Pfade werden immer **fett** oder als `Inline-Code` dargestellt.
+* **Sprache:** Deutsch für Anleitungen und Kommentare; technische Fachbegriffe bleiben Englisch (z. B. "Symlink", "Shell-Expansion").
+* **Visuelle Hierarchie:** Konsistente Nutzung von Markdown-Headern (`#` bis `###`).
+* **Präzision:** Code-Blöcke müssen immer den Sprach-Bezeichner enthalten (z. B. ````bash`), um korrektes Syntax-Highlighting zu gewährleisten.
+* **Hervorhebung:** Systempfade werden fett oder als `Inline-Code` markiert (z. B. **~/.bashrc**).
 
 ## 4. Versionierung & Git-Konventionen
 
-### Versionsschema
+### Semantic Versioning (SemVer 2.0.0)
 
-Wir nutzen Semantic Versioning (SemVer):
+* **Major (1.x.x):** Breaking Changes (z. B. neue Pfadstruktur).
+* **Minor (x.2.x):** Neue Features (z. B. ein neues Modul `bashprompt`).
+* **Patch (x.x.1):** Bugfixes, Tippfehler oder Refactoring.
 
-- **Major (1.x.x):** Grundlegende Architekturänderungen.
-- **Minor (x.2.x):** Neue Features oder Module (z. B. v1.2.1 Review-Upgrade).
-- **Patch (x.x.1):** Bugfixes oder reine Dokumentationsänderungen.
+### Commit-Guidelines
 
-### Commit-Messages
+Wir nutzen aussagekräftige Präfixe für die Git-Historie:
 
-Commits sollten präzise und kategorisiert sein:
-
-- `feat:` Neue Funktionen.
-- `fix:` Fehlerbehebungen.
-- `docs:` Änderungen an der Dokumentation.
-- `refactor:` Code-Optimierung ohne Funktionsänderung.
+* `feat:` Neue Features.
+* `fix:` Fehlerbehebung.
+* `docs:` Dokumentations-Updates.
+* `style:` Änderungen, die die Logik nicht beeinflussen (Formatting).
 
 ## 5. Cross-Plattform Standards
 
-Um die Kompatibilität zwischen Linux und Windows (Git Bash) zu gewährleisten:
+Zur Gewährleistung der nahtlosen Koexistenz von Linux und Windows:
 
-- **Zeilenumbrüche:** Alle Dateien im Repository müssen `LF` (Unix) Zeilenumbrüche nutzen. Git-Konfiguration: `git config core.autocrlf input`.
-- **Pfad-Referenzen:** Nutze ausschließlich `/` als Pfadtrennzeichen. Die Engine kümmert sich um die Übersetzung für Windows-APIs.
-- **Symlink-Policy:** Wir erzwingen native NTFS-Symlinks via `winsymlinks:nativestrict`. Dies stellt sicher, dass Windows-Tools die Links als solche erkennen und nicht als Kopien behandeln.
+* **Erzwungenes LF:** Alle Textdateien müssen Unix-Zeilenumbrüche (`LF`) nutzen. Dies wird über die `.gitattributes` hart vorgegeben.
+* **Pfad-Syntax:** Innerhalb der Skripte wird ausschließlich der Forward-Slash `/` genutzt. Die Engine übersetzt dies bei Bedarf für Windows-spezifische Aufrufe.
+* **Native NTFS-Symlinks:** Wir nutzen das "Native-First"-Prinzip. Links unter Windows werden so erstellt, dass sie auch für native Windows-Programme (z. B. Explorer) als Verknüpfung erkennbar sind.
 
 ## 6. Qualitätssicherung (QA)
 
-Bevor Code in den `main`-Branch übernommen wird, muss er:
+Ein Release der Version v1.2.x oder höher erfordert:
 
-1. Den `shellcheck` ohne Warnungen bestehen.
-2. Die `test_suite.sh` in einer Sandbox erfolgreich durchlaufen.
-3. Mit dem `doctor`-Modul auf einem Linux- und einem Windows-System validiert werden.
+1. **Zero-Warning Policy:** ShellCheck darf keine Warnungen ausgeben.
+2. **Sandbox-Validierung:** Die `test_suite.sh` muss in einer isolierten Umgebung fehlerfrei durchlaufen.
+3. **Cross-Check:** Erfolgreicher `dctl doctor` Lauf auf mindestens einer nativen Linux-Distribution und einer Git-Bash-Installation.
 
 ---
+
 > **Revision:** v1.2.1 | **Stand:** Januar 2026

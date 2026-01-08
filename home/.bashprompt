@@ -1,83 +1,94 @@
 #!/usr/bin/env bash
 #
-# FILE: home/.bashprompt
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: home/.bashprompt                                                    │
+# │ ZWECK: Dynamische PS1-Konfiguration mit Git-Status & Plattform-Erkennung  │
+# │ STANDARDS: Bash >= 4.0, Google Shell Style Guide                          │
+# └───────────────────────────────────────────────────────────────────────────┘
+
 # ──────────────────────────────────────────────────────────────
-# KONFIGURATION DES SHELL-PROMPTS (PS1)
-# ──────────────────────────────────────────────────────────────
-# Zweck:    Visuelle Darstellung der Befehlszeile mit Status-Infos
-#           zu User, Host, Verzeichnis und Git-Branch.
-# Abhängigkeiten: .bashenv, libcolors.sh.
+# 1. GIT-STATUS INTEGRATION
 # ──────────────────────────────────────────────────────────────
 
-# @section 1. Git-Status Integration
-# Extrahiert den aktuellen Branch-Namen, falls man sich in einem Repo befindet.
-# @stdout Formatiert "(branch)" in Gelb oder nichts.
+# @description Ermittelt den aktuellen Git-Branch oder Short-Hash.
+# @stdout Formatiertes Branch-Label für den PS1-Prompt.
 __bash_prompt_git_branch() {
     local branch
-    # v1.2.1 Sync: Nutzung der UI_COL_ Variablen
+    # v1.2.1: Nutzung der UI_COL_ Variablen aus libcolors.sh
     if branch=$(git symbolic-ref --short HEAD 2>/dev/null); then
-        echo -e " ${UI_COL_YELLOW}(${branch})${UI_COL_RESET}"
+        echo -e " ${UI_COL_YELLOW:-}(${branch})${UI_COL_RESET:-}"
     elif branch=$(git rev-parse --short HEAD 2>/dev/null); then
-        echo -e " ${UI_COL_YELLOW}(${branch:0:7}...)${UI_COL_RESET}"
+        # Falls im "Detached HEAD" Zustand: Zeige die ersten 7 Zeichen des Hashes
+        echo -e " ${UI_COL_YELLOW:-}(${branch:0:7}...)${UI_COL_RESET:-}"
     fi
 }
 
-# @section 2. Prompt-Konstruktion (PS1)
-# Setzt die PS1-Variable basierend auf der Plattform und dem User-Status.
-# Formatelemente:
-# \u : Benutzername
-# \h : Hostname (kurz)
-# \w : Aktueller Pfad (komplett, mit ~ für Home)
-# \$ : # für Root, $ für User
+# ──────────────────────────────────────────────────────────────
+# 2. PROMPT-KONSTRUKTION (PS1)
+# ──────────────────────────────────────────────────────────────
+
+# @description Baut die PS1-Variable dynamisch zusammen.
 set_bash_prompt() {
-    local user_color host_color path_color prompt_char_color reset
+    local user_color host_color path_color prompt_char_color reset white
 
-    # WICHTIG: ESC-Sequenzen müssen für PS1 in \[ \] eingeschlossen werden
-    reset="\[${UI_COL_RESET}\]"
+    # WICHTIG: In PS1 müssen ANSI-Sequenzen in \[ \] eingeschlossen sein,
+    # damit die Bash die Länge der Zeile für den Zeilenumbruch korrekt berechnet.
+    reset="\[${UI_COL_RESET:-}\]"
+    white="\[${UI_COL_WHITE:-}\]"
 
-    # Farbwahl basierend auf User-Rechten
+    # Visuelle Unterscheidung: Root vs. User
     if [[ "$EUID" -eq 0 ]]; then
-        user_color="\[${UI_COL_RED}\]"    # Warnfarbe für Root
+        user_color="\[${UI_COL_RED:-}\]"   # Signalrot für Root-Sitzungen
     else
-        user_color="\[${UI_COL_GREEN}\]"  # Standard für User
+        user_color="\[${UI_COL_GREEN:-}\]" # Standard-Grün für User
     fi
 
-    # Plattformspezifische Akzente
-    if [[ "${PLATFORM:-unknown}" == "windows" ]]; then
-        host_color="\[${UI_COL_CYAN}\]"
+    # Plattformspezifische Akzente (Cyan für Windows/Git-Bash, Blau für Linux)
+    if [[ "${PLATFORM:-}" == "windows" ]]; then
+        host_color="\[${UI_COL_CYAN:-}\]"
     else
-        host_color="\[${UI_COL_BLUE}\]"
+        host_color="\[${UI_COL_BLUE:-}\]"
     fi
 
-    path_color="\[${UI_COL_MAGENTA}\]"
-    prompt_char_color="\[${UI_COL_WHITE}\]"
+    path_color="\[${UI_COL_MAGENTA:-}\]"
+    prompt_char_color="\[${UI_COL_WHITE:-}\]"
 
-    # Zusammensetzung des Prompts:
-    # [User@Host:Path] (git-branch) $
-    PS1="${user_color}\u${reset}"                   # User
-    PS1+="\[${UI_COL_WHITE}\]@${reset}"             # @
-    PS1+="${host_color}\h${reset}"                  # Host
-    PS1+="\[${UI_COL_WHITE}\]:${reset}"             # :
-    PS1+="${path_color}\w${reset}"                  # Path
+    # Aufbau der PS1-Struktur:
+    # [User@Host:Path] (git-branch)
+    # $ _
 
-    # Git-Integration (dynamischer Funktionsaufruf)
-    # Die Escaping-Logik \$ sorgt dafür, dass die Funktion bei jedem Prompt-Rendern neu ausgeführt wird
+    PS1="${user_color}\u${reset}"      # Benutzername
+    PS1+="${white}@${reset}"           # Trenner
+    PS1+="${host_color}\h${reset}"     # Hostname
+    PS1+="${white}:${reset}"           # Trenner
+    PS1+="${path_color}\w${reset}"     # Aktueller Pfad
+
+    # Dynamische Git-Integration via Command Substitution
+    # Die Escapes \$(...) sorgen dafür, dass die Funktion bei jedem Druck der
+    # Enter-Taste neu evaluiert wird (wichtig für Branch-Wechsel).
     PS1+="\$(__bash_prompt_git_branch)"
 
-    PS1+="\n"                                       # Neue Zeile
-    PS1+="${prompt_char_color}\$ ${reset}"          # Prompt-Zeichen
+    PS1+="\n"                          # Zeilenumbruch für bessere Übersicht
+    PS1+="${prompt_char_color}\$ ${reset}" # Prompt-Zeichen ($ oder #)
 }
 
-# @section 3. Ausführung
-# Initialisierung des Prompts beim Laden der Datei.
+# ──────────────────────────────────────────────────────────────
+# 3. INITIALISIERUNG & WINDOW-TITLE
+# ──────────────────────────────────────────────────────────────
+
+# Initialen Prompt setzen
 set_bash_prompt
 
-# @section 4. Terminal-Titel (Xterm/Window-Title)
-# Setzt den Titel des Terminal-Fensters auf [User@Host: Path]
+# @section Terminal-Titel (Xterm/Window-Title)
+# Aktualisiert den Titel des Terminal-Fensters oder Tabs.
 case "$TERM" in
     xterm*|rxvt*)
+        # Sequenz: \e]0; TEXT \a
         PS1="\[\e]0;\u@\h: \w\a\]$PS1"
         ;;
 esac
+
+# Export der Variable, damit Sub-Shells das Design übernehmen
+export PS1
 
 true

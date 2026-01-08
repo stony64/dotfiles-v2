@@ -1,33 +1,36 @@
 {
-  // FILE: markdownlint-cli2.jsonc
-  // ──────────────────────────────────────────────────────────────
-  // KONFIGURATION FÜR MARKDOWNLINT-CLI2 (v1.2.1)
-  // ──────────────────────────────────────────────────────────────
-  // Zweck:       Steuerung des Linting-Prozesses für die Doku.
-  // Korrektur:   Entfernung unzulässiger Top-Level Eigenschaften.
-  // ──────────────────────────────────────────────────────────────
+  // ┌───────────────────────────────────────────────────────────────────────────┐
+  // │ FILE: markdownlint-cli2.jsonc                                             │
+  // │ ZWECK: Orchestrierung des Markdown-Linting-Prozesses                      │
+  // │ STANDARDS: v1.2.1, Kompatibel mit VS Code & CI-Pipelines                │
+  // └───────────────────────────────────────────────────────────────────────────┘
 
+  // Suchmuster für zu prüfende Dateien
+  "globs": [
+    "**/*.md"
+  ],
+
+  // Ausschlusskriterien (Ignorierte Pfade)
   "ignores": [
     "node_modules/**",
     ".git/**",
     "**/_exports/**",
     "**/*.bak",
-    "**/*_local.md",
+    "**/*_local.md",    // Schützt private Entwürfe vor Validierung
     "**/local_*.md",
-    "**/test_sandbox/**"
+    "**/test_sandbox/**",
+    "**/tests/out/**"
   ],
 
-  "globs": [
-    "**/*.md"
-  ],
-
+  // Verweis auf die zentrale Regelkonfiguration
   "config": {
-    "extends": "./.markdownlint.jsonc",
-    // Falls HTML-Tags innerhalb von MD-Regeln (wie MD033) Probleme machen,
-    // wird dies direkt in der .markdownlint.jsonc über "MD033": false gelöst.
-    "no-inline-html": false
+    "extends": "./.markdownlint.jsonc"
   },
 
-  "fix": false,
-  "noInlineConfig": false
+  // CLI-spezifische Einstellungen
+  "fix": false,             // Automatische Fixes nur manuell via Flag zulassen
+  "noInlineConfig": false,  // Erlaubt Kommentare in Docs
+  "outputFormatters": [
+    [ "markdownlint-cli2-formatter-pretty" ]
+  ]
 }

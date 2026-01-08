@@ -1,28 +1,34 @@
 #
-# FILE: .gitignore
-# ──────────────────────────────────────────────────────────────
-# ZENTRALE GIT-IGNORE KONFIGURATION (v1.2.1)
-# ──────────────────────────────────────────────────────────────
-# Zweck:       Schutz vor sensiblen Daten und System-Müll.
-#              Sicherstellung der Repository-Sauberkeit.
-# ──────────────────────────────────────────────────────────────
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ FILE: .gitignore                                                          │
+# │ ZWECK: Schutz vor sensiblen Daten und System-Rückständen                  │
+# │ STANDARDS: v1.2.1, Whitelist-Prinzip, Security-First                      │
+# └───────────────────────────────────────────────────────────────────────────┘
 
 # ──────────────────────────────────────────────────────────────
-# 1. LOKALE & SENSIBLE DATEN
+# 1. SENSIBLE DATEN & LOKALE KONFIGURATION
 # ──────────────────────────────────────────────────────────────
-# Alles, was auf '_local' endet, wird niemals eingecheckt.
+# Alles, was '_local' im Namen trägt, bleibt auf deinem Rechner.
 *_local
 .bash*_local
 .bash_history
 .bash_sessions/
+.ssh/
+.gnupg/
+
+# Credentials und Keys
 .env
 .netrc
 *.key
 *.pem
+*.pub
+*.p12
+*.pfx
 
 # ──────────────────────────────────────────────────────────────
-# 2. EDITOR & IDE (VS Code / Nano / Vim)
+# 2. EDITOREN & IDEs (VS CODE / NANO / VIM)
 # ──────────────────────────────────────────────────────────────
+# Wir ignorieren persönliche VS Code Einstellungen, behalten aber Projekt-Templates.
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
@@ -30,7 +36,7 @@
 !.vscode/tasks.json
 !*.code-workspace
 
-# Editor-Backups und Swap-Files
+# Temporäre Editor-Dateien (Swap, Backups)
 *.swp
 *.swo
 *~
@@ -39,37 +45,45 @@
 *.orig
 *.rej
 .history/
+.nfs*
 
 # ──────────────────────────────────────────────────────────────
-# 3. SYSTEM-MÜLL (OS-SPECIFIC)
+# 3. SYSTEM-BALLAST (OS-SPEZIFISCH)
 # ──────────────────────────────────────────────────────────────
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+# Windows
 Thumbs.db
 Desktop.ini
-.directory
 ehthumbs.db
-[Dd]ebin/
+$RECYCLE.BIN/
+# Linux
+.directory
+.fuse_hidden*
 
 # ──────────────────────────────────────────────────────────────
-# 4. LOGS & TEMPORÄRE DATEN (SANDBOX)
+# 4. LOGS, EXPORTE & TEMPORÄRE DATEN
 # ──────────────────────────────────────────────────────────────
-# Logs und die Zustandsdatei des Controllers
 *.log
 *.tmp
 .dotfiles_state
-.nfs*
+
+# Projekt-spezifische Exporte und Protokolle
+_exports/
+review_dump_*
 
 # Test-Sandbox (Falls test_suite.sh lokal Dateien erzeugt)
 test_sandbox/
 tests/out/
 
 # ──────────────────────────────────────────────────────────────
-# 5. WHITELIST (KERN-DATEIEN EXPLIZIT ERLAUBEN)
+# 5. WHITELIST (EXPLIZITE REPOSITORY-DATEIEN)
 # ──────────────────────────────────────────────────────────────
-# Wir stellen sicher, dass alle Modul-Dateien trotz obiger Regeln
-# (z.B. *.bak oder System-Müll) erfasst werden können.
+# Wir stellen sicher, dass die Kern-Architektur trotz globaler Regeln im Index bleibt.
 
-# Hauptkomponenten
+# Skripte & Meta
 !dotfilesctl.sh
 !test_suite.sh
 !.shellcheckrc
@@ -77,14 +91,22 @@ tests/out/
 !.gitattributes
 !.gitignore
 
-# Verzeichnisse (Inhalte erlauben)
+# Verzeichnisse (Inhalt inkludieren)
 !lib/
+!lib/**
 !home/
+!home/**
 !docs/
+!docs/**
 !config/
 !config/*.example
 
-# Spezifische Dotfiles in home/
-!home/.bash*
+# Sicherstellen, dass Dotfiles in home/ (trotz .bash* Mustern) erfasst werden
+!home/.bashrc
+!home/.bashenv
+!home/.bashaliases
+!home/.bashfunctions
+!home/.bashexports
+!home/.bashprompt
 !home/.dircolors
 !home/.nanorc
