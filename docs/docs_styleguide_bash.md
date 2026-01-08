@@ -86,4 +86,3 @@ Nutze die Präfixe aus `libconstants.sh` für konsistentes Logging:
 * Nutze `local` für **alle** Variablen innerhalb von Funktionen.
 
 ---
-
