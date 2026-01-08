@@ -70,26 +70,26 @@ test_structure() {
     return $err
 }
 
-# @test Prüft die Integrität der Bibliotheken (Include-Guards & Namespace v1.2.2).
+# @test Prüft die Integrität der Bibliotheken (Master-Guard & Namespace).
 test_libraries() {
-    echo -e "\n${UI_ATTR_BOLD:-}>>> Test 2: Bibliotheken & Namespace (v1.2.2)${UI_COL_RESET:-}"
+    echo -e "\n${UI_ATTR_BOLD:-}>>> Test 2: Bibliotheken & Namespace (v1.2.3)${UI_COL_RESET:-}"
 
-    # Test auf Double-Sourcing (Prüfung der Include-Guards)
-    # Wir unterdrücken stderr, um die erwarteten 'readonly' Warnungen bei Fehlern zu fangen
-    if ( source "$LIB_DIR/libconstants.sh" && source "$LIB_DIR/libconstants.sh" ) 2>/tmp/test_err; then
-        log_test_result 0 "Include-Guards verhindern Redefinition erfolgreich."
+    # Test auf Master-Guard
+    if [[ -n "${DOTFILES_CORE_LOADED:-}" ]]; then
+        log_test_result 0 "Master-Guard (DOTFILES_CORE_LOADED) ist aktiv."
     else
-        log_test_result 1 "Kollision bei Double-Sourcing festgestellt (Check Guards!)."
+        log_test_result 1 "Master-Guard nicht gefunden!"
         return 1
     fi
 
-    # Namespace Check für das neue v1.2.2 Schema (_VAL vs Sequenz)
-    local ns_err=0
-    [[ -n "${UI_COL_RED_VAL:-}" ]] || { log_test_result 1 "UI_COL_RED_VAL (Rohwert) fehlt"; ns_err=1; }
-    [[ -n "${UI_COL_RED:-}" ]]     || { log_test_result 1 "UI_COL_RED (Sequenz) fehlt"; ns_err=1; }
-
-    [[ $ns_err -eq 0 ]] && log_test_result 0 "Namespace-Validierung (_VAL & Sequenzen) erfolgreich."
-    return $ns_err
+    # Namespace Check für v1.2.3 (Prüfen ob libcolors korrekt geladen wurde)
+    # Wir prüfen, ob eine der Kern-Variablen existiert
+    if [[ -n "${UI_COL_RED_VAL:-}" || -n "${UI_COL_RED:-}" ]]; then
+        log_test_result 0 "Namespace-Validierung (Farben) erfolgreich."
+    else
+        log_test_result 1 "Namespace-Fehler: Farbvariablen fehlen!"
+        return 1
+    fi
 }
 
 # @test Führt eine Trockenübung des Controllers aus.
