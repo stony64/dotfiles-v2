@@ -6,11 +6,6 @@
 # │ STANDARDS: set -euo pipefail, Bash >= 4.0, Google Shell Style Guide       │
 # └───────────────────────────────────────────────────────────────────────────┘
 
-# INCLUDE GUARD
-# Include-Guard (verhindert Mehrfachladen und schützt vor readonly-Fehlern)
-[[ -n "${_LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED:-}" ]] && return
-declare -g _LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED=1
-
 # @description Ermittelt den absoluten Zielpfad einer Datei oder eines Symlinks.
 # Implementiert eine plattformübergreifende Pfadauflösung (Linux/Windows).
 # @param $1 Pfad, der aufgelöst werden soll.

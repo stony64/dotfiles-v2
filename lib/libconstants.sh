@@ -2,13 +2,9 @@
 #
 # ┌───────────────────────────────────────────────────────────────────────────┐
 # │ FILE: lib/libconstants.sh                                                 │
-# │ ZWECK: Zentrale Konfiguration, UI-Definitionen und Datenmodell (v1.2.1)    │
+# │ ZWECK: Zentrale Konfiguration, UI-Definitionen und Datenmell (v1.2.1)    │
 # │ STANDARDS: set -euo pipefail, Bash >= 4.0, Google Shell Style Guide       │
 # └───────────────────────────────────────────────────────────────────────────┘
-
-# INCLUDE GUARD# Include-Guard (verhindert Mehrfachladen und schützt vor readonly-Fehlern)
-[[ -n "${_LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED:-}" ]] && return
-declare -g _LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED=1
 
 # 1. LOCALE FIX
 # Erzwingt UTF-8 für konsistente Symbol-Darstellung und Sortierung.

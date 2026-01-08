@@ -6,11 +6,6 @@
 # │ STANDARDS: set -euo pipefail, Bash >= 4.0, Google Shell Style Guide       │
 # └───────────────────────────────────────────────────────────────────────────┘
 
-# INCLUDE GUARD
-# Include-Guard (verhindert Mehrfachladen und schützt vor readonly-Fehlern)
-[[ -n "${_LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED:-}" ]] && return
-declare -g _LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED=1
-
 # @description Initialisiert die Windows-Umgebung für native Symlinks.
 # Erzwingt MSYS-Verhalten, das echte NTFS-Symlinks statt Kopien erstellt.
 # @return EXIT_OK oder bricht via die() ab.
