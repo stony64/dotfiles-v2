@@ -16,19 +16,19 @@ Das Projekt folgt drei Kernprinzipien:
 
 Die Struktur ist flach und zweckorientiert:
 
-* **`/home`**: Enthält die Rohdateien (Dotfiles), die als Symlinks in das `$HOME` des Nutzers gespiegelt werden.
-* **`/lib`**: Das Gehirn des Projekts. Enthält Module wie `libengine.sh`, `libconstants.sh` und `libplatform_*.sh`. Nur Funktionen, keine direkten Befehle.
-* **`/docs`**: Markdown-Dokumentation für Menschen.
-* **Root (`/`)**: Nur die Haupt-Entrypoints (`dotfilesctl.sh`, `test_suite.sh`) und Projektmetadaten.
+- **`/home`**: Enthält die Rohdateien (Dotfiles), die als Symlinks in das `$HOME` des Nutzers gespiegelt werden.
+- **`/lib`**: Das Gehirn des Projekts. Enthält Module wie `libengine.sh`, `libconstants.sh` und `libplatform_*.sh`. Nur Funktionen, keine direkten Befehle.
+- **`/docs`**: Markdown-Dokumentation für Menschen.
+- **Root (`/`)**: Nur die Haupt-Entrypoints (`dotfilesctl.sh`, `test_suite.sh`) und Projektmetadaten.
 
 ## 3. Dokumentations-Standards (Markdown)
 
 Alle `.md`-Dateien müssen folgenden Regeln entsprechen:
 
-* **Sprache:** Deutsch (für Kommentare im Code und Anleitungen), Fachbegriffe bleiben Englisch.
-* **Hierarchie:** Konsistente Nutzung von Überschriften (`#`, `##`, `###`).
-* **Code-Blöcke:** Immer mit Sprach-Syntax-Highlighting versehen (z. B. ` ` `bash).
-* **Dateipfade:** Pfade werden immer **fett** oder als `Inline-Code` dargestellt.
+- **Sprache:** Deutsch (für Kommentare im Code und Anleitungen), Fachbegriffe bleiben Englisch.
+- **Hierarchie:** Konsistente Nutzung von Überschriften (`#`, `##`, `###`).
+- **Code-Blöcke:** Immer mit Sprach-Syntax-Highlighting versehen (z. B. ` ```bash `).
+- **Dateipfade:** Pfade werden immer **fett** oder als `Inline-Code` dargestellt.
 
 ## 4. Versionierung & Git-Konventionen
 
@@ -36,26 +36,26 @@ Alle `.md`-Dateien müssen folgenden Regeln entsprechen:
 
 Wir nutzen Semantic Versioning (SemVer):
 
-* **Major (1.x.x):** Grundlegende Architekturänderungen.
-* **Minor (x.2.x):** Neue Features oder Module (z. B. v1.2.1 Review-Upgrade).
-* **Patch (x.x.1):** Bugfixes oder reine Dokumentationsänderungen.
+- **Major (1.x.x):** Grundlegende Architekturänderungen.
+- **Minor (x.2.x):** Neue Features oder Module (z. B. v1.2.1 Review-Upgrade).
+- **Patch (x.x.1):** Bugfixes oder reine Dokumentationsänderungen.
 
 ### Commit-Messages
 
 Commits sollten präzise und kategorisiert sein:
 
-* `feat:` Neue Funktionen.
-* `fix:` Fehlerbehebungen.
-* `docs:` Änderungen an der Dokumentation.
-* `refactor:` Code-Optimierung ohne Funktionsänderung.
+- `feat:` Neue Funktionen.
+- `fix:` Fehlerbehebungen.
+- `docs:` Änderungen an der Dokumentation.
+- `refactor:` Code-Optimierung ohne Funktionsänderung.
 
 ## 5. Cross-Plattform Standards
 
 Um die Kompatibilität zwischen Linux und Windows (Git Bash) zu gewährleisten:
 
-* **Zeilenumbrüche:** Alle Dateien im Repository müssen `LF` (Unix) Zeilenumbrüche nutzen. Git-Konfiguration: `git config core.autocrlf input`.
-* **Pfad-Referenzen:** Nutze ausschließlich `/` als Pfadtrennzeichen. Die Engine kümmert sich um die Übersetzung für Windows-APIs.
-* **Symlink-Policy:** Wir erzwingen native NTFS-Symlinks via `winsymlinks:nativestrict`. Dies stellt sicher, dass Windows-Tools die Links als solche erkennen und nicht als Kopien behandeln.
+- **Zeilenumbrüche:** Alle Dateien im Repository müssen `LF` (Unix) Zeilenumbrüche nutzen. Git-Konfiguration: `git config core.autocrlf input`.
+- **Pfad-Referenzen:** Nutze ausschließlich `/` als Pfadtrennzeichen. Die Engine kümmert sich um die Übersetzung für Windows-APIs.
+- **Symlink-Policy:** Wir erzwingen native NTFS-Symlinks via `winsymlinks:nativestrict`. Dies stellt sicher, dass Windows-Tools die Links als solche erkennen und nicht als Kopien behandeln.
 
 ## 6. Qualitätssicherung (QA)
 
@@ -66,5 +66,4 @@ Bevor Code in den `main`-Branch übernommen wird, muss er:
 3. Mit dem `doctor`-Modul auf einem Linux- und einem Windows-System validiert werden.
 
 ---
-
 > **Revision:** v1.2.1 | **Stand:** Januar 2026
