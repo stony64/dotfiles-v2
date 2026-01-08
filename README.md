@@ -1,32 +1,29 @@
 # Dotfiles Management System (v1.2.1)
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
-![Bash: >=4.0](https://img.shields.io/badge/Bash-%3E%3D4.0-orange.svg)
-![Platform: Linux & Windows](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows-lightgrey.svg)
-
 Ein hochmodulares, plattformübergreifendes System zur Verwaltung von Konfigurationsdateien (Dotfiles). Optimiert für maximale Konsistenz zwischen nativen **Linux-Systemen** und **Windows-Umgebungen** (Git Bash / MSYS2).
 
 ## 🚀 Highlights
 
-- **Plattform-Agnostisch:** Einheitliche Logik für Linux und Windows mit automatischer Erkennung.
-- **Native Windows Symlinks:** Nutzt `nativestrict` für echte NTFS-Symlinks (keine Kopien!).
-- **Modulare Architektur:** Klare Trennung von Bibliotheken (`lib/`), Engine und User-Konfiguration.
-- **Integrierte Diagnose:** Umfangreiche Health-Checks (`dctl doctor`) für Abhängigkeiten und Rechte.
-- **Sicher & Robust:** Strenges Error-Handling (`set -euo pipefail`) und idempotente Operationen.
+* **Plattform-Agnostisch:** Einheitliche Logik für Linux und Windows mit automatischer Erkennung.
+* **Native Windows Symlinks:** Nutzt `nativestrict` für echte NTFS-Symlinks (keine Kopien!).
+* **Modulare Architektur:** Klare Trennung von Bibliotheken (`lib/`), Engine und User-Konfiguration.
+* **Integrierte Diagnose:** Umfangreiche Health-Checks (`dctl doctor`) für Abhängigkeiten und Rechte.
+* **Sicher & Robust:** Strenges Error-Handling (`set -euo pipefail`) und idempotente Operationen.
 
 ## 📂 Projektstruktur
 
 ```text
-.
+~/.dotfiles/              # Standard-Installationspfad (Repo-Root)
 ├── dotfilesctl.sh        # Zentraler Orchestrator (Main Entry)
 ├── test_suite.sh         # Automatisierte Test-Umgebung (Sandbox)
-├── lib/                  # Kern-Bibliotheken
-│   ├── libcolors.sh      # UI & Farbcodes
-│   ├── libplatform_*.sh  # OS-spezifische Abstraktion
-│   └── libengine.sh      # Symlink- & Backup-Logik
+├── lib/                  # Kern-Bibliotheken (v1.2.1)
+│   ├── libcolors.sh      # UI-Definitionen (ESC-Sequenzen)
+│   ├── libconstants.sh   # UI_COL_* Variablen & Symbole
+│   ├── libplatform_*.sh  # OS-spezifische Abstraktion (Linux/Windows)
+│   └── libengine.sh      # Symlink-, Backup- & Idempotenz-Logik
 ├── home/                 # Die eigentlichen Dotfiles (~/.*)
 │   ├── .bashrc           # Orchestrator der Shell-Konfiguration
-│   ├── .bashenv          # Pfade & Shell-Optionen
+│   ├── .bashenv          # Plattform-Erkennung & Pfade
 │   └── .bashfunctions    # Power-User Hilfsfunktionen
 └── docs/                 # Detaillierte Dokumentation
 
@@ -36,64 +33,64 @@ Ein hochmodulares, plattformübergreifendes System zur Verwaltung von Konfigurat
 
 ### Voraussetzungen
 
-- **Bash >= 4.0**
-- **Git**
-- **Windows:** Aktivierter "Entwicklermodus" (für native Symlinks ohne Admin-Rechte).
+* **Bash >= 4.0**
+* **Git**
+* **Windows:** Aktivierter **Entwicklermodus** (Settings > Privacy & Security > For developers), um Symlinks ohne Administratorrechte zu ermöglichen.
 
 ### Schnellstart
 
-1. Repository klonen:
+1. **Repository klonen:**
 
 ```bash
-git clone [https://github.com/dein-user/dotfiles-v2.git](https://github.com/dein-user/dotfiles-v2.git) ~/.dotfiles
+git clone https://github.com/stony64/dotfiles-v2.git ~/.dotfiles
 cd ~/.dotfiles
 
 ```
 
-1. System-Check ausführen:
+1. **System-Check ausführen:**
 
 ```bash
-./dotfilesctl.sh health
+./dotfilesctl.sh doctor
 
 ```
 
-1. Installation starten:
+1. **Installation starten:**
 
 ```bash
-# Auf Linux (für den aktuellen User):
-./dotfilesctl.sh install --user $(whoami)
-
-# Auf Windows:
+# Auf Linux (interaktiv für aktuellen User):
 ./dotfilesctl.sh install
+
+# Simulation (empfohlen):
+./dotfilesctl.sh install --dry-run
 
 ```
 
 ## 💻 Benutzung
 
-Der zentrale Befehl lautet `dotfilesctl.sh` (Alias: `dctl`).
+Nach der Installation steht der Alias **`dctl`** zur Verfügung.
 
 | Befehl | Beschreibung |
 | --- | --- |
-| `install` | Erstellt Symlinks gemäß Whitelist im Home-Verzeichnis. |
-| `uninstall` | Entfernt die Symlinks sicher. |
-| `doctor` | Führt eine vollständige System- und Integritätsdiagnose aus. |
-| `update` | Aktualisiert das Repository via Git. |
-| `checksymlinks` | Validiert die Integrität bestehender Links. |
+| `install` | Erstellt Symlinks/Backups gemäß Whitelist. |
+| `uninstall` | Entfernt Symlinks sicher und stellt Backups wieder her. |
+| `doctor` | Validiert Tools, Pfade und Symlink-Berechtigungen. |
+| `update` | Aktualisiert das Repository und synchronisiert Änderungen. |
 
-### Optionen
+### Globale Optionen
 
-- `--dry-run`: Simuliert alle Schreibvorgänge (empfohlen vor Erst-Installation).
-- `--strict`: Behandelt Warnungen als kritische Fehler.
+* `--dry-run`: Führt keine Änderungen am Dateisystem aus (nur Logging).
+* `--user <name>`: (Linux-only) Zielbenutzer für die Installation definieren.
 
 ## 🛡 Qualitätssicherung
 
-Das Projekt enthält eine eigene Test-Suite, die alle Operationen in einer isolierten Sandbox (`/tmp`) validiert, ohne dein echtes System zu gefährden:
+Das Projekt enthält eine integrierte Test-Suite. Diese erstellt eine temporäre Umgebung, simuliert verschiedene Betriebssysteme und validiert die Symlink-Logik, ohne Dateien in deinem echten Home-Verzeichnis zu verändern.
 
 ```bash
+# Ausführung der Validierungstests
 ./test_suite.sh
 
 ```
 
 ## 📄 Lizenz
 
-Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe [LICENSE](https://www.google.com/search?q=LICENSE) Datei für Details.
+Dieses Projekt ist unter der MIT-Lizenz lizenziert.

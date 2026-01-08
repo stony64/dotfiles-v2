@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # FILE: home/.bashprompt
 # ──────────────────────────────────────────────────────────────
@@ -13,10 +14,11 @@
 # @stdout Formatiert "(branch)" in Gelb oder nichts.
 __bash_prompt_git_branch() {
     local branch
+    # v1.2.1 Sync: Nutzung der UI_COL_ Variablen
     if branch=$(git symbolic-ref --short HEAD 2>/dev/null); then
-        echo -e " ${COL_YELLOW}(${branch})${COL_RESET}"
+        echo -e " ${UI_COL_YELLOW}(${branch})${UI_COL_RESET}"
     elif branch=$(git rev-parse --short HEAD 2>/dev/null); then
-        echo -e " ${COL_YELLOW}(${branch:0:7}...)${COL_RESET}"
+        echo -e " ${UI_COL_YELLOW}(${branch:0:7}...)${UI_COL_RESET}"
     fi
 }
 
@@ -28,40 +30,42 @@ __bash_prompt_git_branch() {
 # \w : Aktueller Pfad (komplett, mit ~ für Home)
 # \$ : # für Root, $ für User
 set_bash_prompt() {
-    local user_color host_color path_color prompt_char_color
+    local user_color host_color path_color prompt_char_color reset
+
+    # WICHTIG: ESC-Sequenzen müssen für PS1 in \[ \] eingeschlossen werden
+    reset="\[${UI_COL_RESET}\]"
 
     # Farbwahl basierend auf User-Rechten
     if [[ "$EUID" -eq 0 ]]; then
-        user_color="${COL_RED}"   # Warnfarbe für Root
+        user_color="\[${UI_COL_RED}\]"    # Warnfarbe für Root
     else
-        user_color="${COL_GREEN}" # Standard für User
+        user_color="\[${UI_COL_GREEN}\]"  # Standard für User
     fi
 
     # Plattformspezifische Akzente
     if [[ "${PLATFORM:-unknown}" == "windows" ]]; then
-        host_color="${COL_CYAN}"
+        host_color="\[${UI_COL_CYAN}\]"
     else
-        host_color="${COL_BLUE}"
+        host_color="\[${UI_COL_BLUE}\]"
     fi
 
-    path_color="${COL_MAGENTA}"
-    prompt_char_color="${COL_WHITE}"
+    path_color="\[${UI_COL_MAGENTA}\]"
+    prompt_char_color="\[${UI_COL_WHITE}\]"
 
     # Zusammensetzung des Prompts:
     # [User@Host:Path] (git-branch) $
-    PS1="\[${user_color}\]\u\[${COL_RESET}\]"       # User
-    PS1+="\[${COL_WHITE}\]@\[${COL_RESET}\]"        # @
-    PS1+="\[${host_color}\]\h\[${COL_RESET}\]"      # Host
-    PS1+="\[${COL_WHITE}\]:\[${COL_RESET}\]"        # :
-    PS1+="\[${path_color}\]\w\[${COL_RESET}\]"      # Path
+    PS1="${user_color}\u${reset}"                   # User
+    PS1+="\[${UI_COL_WHITE}\]@${reset}"             # @
+    PS1+="${host_color}\h${reset}"                  # Host
+    PS1+="\[${UI_COL_WHITE}\]:${reset}"             # :
+    PS1+="${path_color}\w${reset}"                  # Path
 
-    # Git-Integration (als Funktion ausgeführt beim Rendern)
-    # Hinweis: Wir nutzen hier eine einfache Einbindung, für maximale
-    # Performance könnte man PROMPT_COMMAND nutzen.
+    # Git-Integration (dynamischer Funktionsaufruf)
+    # Die Escaping-Logik \$ sorgt dafür, dass die Funktion bei jedem Prompt-Rendern neu ausgeführt wird
     PS1+="\$(__bash_prompt_git_branch)"
 
-    PS1+=" \n"                                      # Neue Zeile für mehr Platz
-    PS1+="\[${prompt_char_color}\]\$ \[${COL_RESET}\]" # Prompt-Zeichen ($ oder #)
+    PS1+="\n"                                       # Neue Zeile
+    PS1+="${prompt_char_color}\$ ${reset}"          # Prompt-Zeichen
 }
 
 # @section 3. Ausführung
@@ -75,8 +79,5 @@ case "$TERM" in
         PS1="\[\e]0;\u@\h: \w\a\]$PS1"
         ;;
 esac
-
-# Cleanup der internen Funktion (optional, falls nicht mehr benötigt)
-# unset -f set_bash_prompt
 
 true

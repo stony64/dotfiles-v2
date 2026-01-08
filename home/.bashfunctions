@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # FILE: home/.bashfunctions
 # ──────────────────────────────────────────────────────────────
@@ -66,15 +67,17 @@ extract() {
 myip() {
     echo -n "Lokale IP: "
     if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-        hostname -I | awk '{print $1}'
+        # v1.2.1: Fallback auf hostname -i falls -I nicht verfügbar
+        hostname -I 2>/dev/null | awk '{print $1}' || hostname -i
     elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
         ipconfig | grep -i "IPv4" | awk -F: '{ print $2 }' | head -n 1 | sed 's/^[ \t]*//'
     fi
 
     if command -v curl >/dev/null 2>&1; then
         echo -n "Öffentliche IP: "
-        curl -s https://ifconfig.me
-        echo ""
+        local pub_ip
+        pub_ip=$(curl -s --connect-timeout 5 https://ifconfig.me)
+        echo "${pub_ip:-Nicht erreichbar}"
     fi
 }
 
@@ -97,10 +100,15 @@ elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
     # @stdout Konvertierter Unix-Pfad.
     upath() {
         if [[ -z "${1:-}" ]]; then
-            # PowerShell zur Clipboard-Abfrage (robusterer Aufruf)
             local clip
-            clip=$(powershell.exe -NoProfile -Command "Get-Clipboard" 2>/dev/null | tr -d '\r')
-            [[ -n "$clip" ]] && cygpath -u "$clip" || echo "Zwischenablage leer."
+            # v1.2.1: Nutze powershell core oder desktop und entferne Zeilenumbrüche sauberer
+            clip=$(powershell.exe -NoProfile -Command "Get-Clipboard" 2>/dev/null | tr -d '\r\n')
+            if [[ -n "$clip" ]]; then
+                cygpath -u "$clip"
+            else
+                echo "Zwischenablage leer oder kein Zugriff."
+                return 1
+            fi
         else
             cygpath -u "$1"
         fi
@@ -115,14 +123,15 @@ health() {
     echo "--- System Health Check ---"
     echo -n "Datum:  " && date
     echo -n "User:   " && whoami
-    echo -n "Uptime: " && uptime -p
+    # Uptime -p ist Linux-spezifisch, Windows braucht Fallback
+    echo -n "Uptime: " && { uptime -p 2>/dev/null || uptime; }
 
     if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
         echo "Disk Usage:"
         df -h / | tail -n 1
     elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
         echo "Disk Usage (C:):"
-        df -h /c | tail -n 1
+        df -h /c 2>/dev/null | tail -n 1
     fi
 }
 

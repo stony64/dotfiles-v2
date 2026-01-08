@@ -2,24 +2,22 @@
 #
 # FILE: lib/libengine.sh
 # ──────────────────────────────────────────────────────────────
-# KERN-LOGIK FÜR INSTALLATION UND DEINSTALLATION
+# KERN-LOGIK FÜR INSTALLATION UND DEINSTALLATION (v1.2.1)
 # ──────────────────────────────────────────────────────────────
-# Zweck:    Verwaltung von Symlinks (Home) und Kopien (Config).
-#           Implementiert Idempotenz und Sicherheits-Backups.
-# Abhängigkeiten: libcolors.sh, libconstants.sh, libcommon.sh, libchecks.sh
+# Zweck:     Verwaltung von Symlinks (Home) und Kopien (Config).
+#            Implementiert Idempotenz und Sicherheits-Backups.
 # ──────────────────────────────────────────────────────────────
 
+# 1. INCLUDE GUARD
+[[ -n "${_LIB_ENGINE_LOADED:-}" ]] && return
+readonly _LIB_ENGINE_LOADED=1
+
 # @description Installiert Dotfiles als Symlinks im Home-Verzeichnis des Users.
-# @param $1 Home-Verzeichnis des Ziel-Users.
-# @param $2 Benutzername (für Logging).
-# @param $3 Root-Pfad des Repositories.
-# @stdout Detaillierter Fortschritt der Verknüpfungs-Operationen.
-# @return EXIT_OK oder EXIT_FATAL.
 engine_install_home() {
     local home_dir="$1" user_name="$2" repo_root="$3"
     local errors=0
 
-    log_info "Starte Home-Installation für ${user_name} in ${home_dir}"
+    log_info "Starte Home-Installation für ${UI_COL_CYAN}${user_name}${UI_COL_RESET} in ${home_dir}"
 
     local file src dest
     for file in "${DOTFILES_WHITELIST[@]}"; do
@@ -49,7 +47,7 @@ engine_install_home() {
             continue
         fi
 
-        # 4. Verknüpfung erstellen (via run-Wrapper für Dry-Run Support)
+        # 4. Verknüpfung erstellen
         run ln -sf "$src" "$dest" || ((errors++))
     done
 
@@ -61,16 +59,11 @@ engine_install_home() {
 }
 
 # @description Entfernt Symlinks, die auf das Repository zeigen.
-# @param $1 Home-Verzeichnis des Ziel-Users.
-# @param $2 Benutzername.
-# @param $3 Root-Pfad des Repositories.
-# @stdout Protokoll der entfernten Verknüpfungen.
-# @return EXIT_OK oder EXIT_FATAL.
 engine_uninstall_home() {
     local home_dir="$1" user_name="$2" repo_root="$3"
     local errors=0
 
-    log_info "Starte Deinstallation für ${user_name}"
+    log_info "Starte Deinstallation für ${UI_COL_CYAN}${user_name}${UI_COL_RESET}"
 
     local file src dest
     for file in "${DOTFILES_WHITELIST[@]}"; do
@@ -103,10 +96,6 @@ engine_uninstall_home() {
 }
 
 # @description Kopiert Verzeichnisse aus config/ nach ~/.config/ inklusive Backup-Logik.
-# @param $1 Home-Verzeichnis des Ziel-Users.
-# @param $2 Root-Pfad des Repositories.
-# @stdout Meldungen über Backups und Kopiervorgänge.
-# @return EXIT_OK oder EXIT_FATAL.
 engine_install_runtime_configs() {
     local home_dir="$1" repo_root="$2"
     local config_dest="${home_dir}/.config"
@@ -117,6 +106,7 @@ engine_install_runtime_configs() {
         run mkdir -p "$config_dest" || return "$EXIT_FATAL"
     fi
 
+    local tool
     for tool in "${RUNTIME_CONFIGS[@]}"; do
         local src="${repo_root}/${REPO_CONFIG_DIR}/${tool}"
         local dest="${config_dest}/${tool}"

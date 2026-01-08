@@ -2,11 +2,11 @@
 #
 # FILE: dotfilesctl.sh
 # ──────────────────────────────────────────────────────────────
-# ZENTRALER ORCHESTRATOR FÜR DAS DOTFILES-MANAGEMENT
+# ZENTRALER ORCHESTRATOR FÜR DAS DOTFILES-MANAGEMENT (v1.2.1)
 # ──────────────────────────────────────────────────────────────
-# Zweck:    Zentraler Einstiegspunkt zur Verwaltung von Symlinks
-#           und System-Diagnosen auf Linux & Windows.
-# Standards: set -euo pipefail, Bash >= 4.0, Modulares Design.
+# Zweck:      Zentraler Einstiegspunkt zur Verwaltung von Symlinks
+#             und System-Diagnosen auf Linux & Windows.
+# Standards:  set -euo pipefail, Bash >= 4.0, Modulares Design.
 # ──────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -15,7 +15,6 @@ set -euo pipefail
 # 1. INITIALISIERUNG & PFAD-AUFLÖSUNG
 # ──────────────────────────────────────────────────────────────
 
-# @description Prüft die Bash-Version und löst den REPO_ROOT Pfad auf.
 if (( BASH_VERSINFO[0] < 4 )); then
     echo -e "[ X ] Fehler: Bash >= 4.0 erforderlich (gefunden: ${BASH_VERSION})." >&2
     exit 1
@@ -48,7 +47,8 @@ for lib in "${LIB_FILES[@]}"; do
         # shellcheck disable=SC1090
         source "${REPO_ROOT}/lib/$lib"
     else
-        echo -e "KRITISCH: Bibliothek ${REPO_ROOT}/lib/$lib nicht gefunden!" >&2
+        # Fallback-Farbe, falls libcolors/constants noch nicht geladen
+        echo -e "\e[31mKRITISCH: Bibliothek ${REPO_ROOT}/lib/$lib nicht gefunden!\e[0m" >&2
         exit 1
     fi
 done
@@ -57,11 +57,9 @@ done
 # 3. FUNKTIONEN
 # ──────────────────────────────────────────────────────────────
 
-# @description Zeigt die Hilfe und verfügbare Befehle an.
-# @stdout Nutzungsanleitung mit farblicher Hervorhebung.
 usage() {
-    echo -e "${STYLE_BOLD_YELLOW}Dotfiles Controller${COL_RESET} (v1.2.1)"
-    echo -e "Repo: ${COL_CYAN}${REPO_ROOT}${COL_RESET}\n"
+    echo -e "${STYLE_BOLD_YELLOW}Dotfiles Controller${UI_COL_RESET} (v1.2.1)"
+    echo -e "Repo: ${UI_COL_CYAN}${REPO_ROOT}${UI_COL_RESET}\n"
     cat <<EOF
 Nutzung: $(basename "$0") BEFEHL [OPTIONEN]
 
@@ -82,13 +80,6 @@ Optionen:
 EOF
 }
 
-# @description Steuert Installation und Deinstallation für Linux und Windows.
-# @param $1 Aktion ("install" oder "uninstall").
-# @param $2 Betriebssystem ("linux" oder "windows").
-# @param $3 Flag für alle Benutzer (0 oder 1).
-# @param $4 Spezifischer Benutzername (optional).
-# @stdout Protokoll der Engine-Operationen.
-# @return EXIT_OK oder EXIT_FATAL.
 cmd_install_uninstall() {
     local action="$1" os="$2" all="$3" user="$4"
     local error_count=0
@@ -108,7 +99,7 @@ cmd_install_uninstall() {
         for u in "${users_to_process[@]}"; do
             local home
             home="$(getent passwd "$u" | cut -d: -f6)"
-            log_info "Verarbeite Benutzer: ${COL_CYAN}$u${COL_RESET} ($home)"
+            log_info "Verarbeite Benutzer: ${UI_COL_CYAN}$u${UI_COL_RESET} ($home)"
 
             if [[ "$action" == "install" ]]; then
                 engine_install_home "$home" "$u" "$REPO_ROOT" || ((error_count++))
@@ -120,7 +111,7 @@ cmd_install_uninstall() {
         [[ "$all" -eq 1 || -n "$user" ]] && die "User-Wahl unter Windows nicht unterstützt."
         [[ "$action" == "install" ]] && platform_windows_require_symlink_rights
 
-        log_info "Verarbeite Benutzer: ${COL_CYAN}$USER${COL_RESET} ($HOME)"
+        log_info "Verarbeite Benutzer: ${UI_COL_CYAN}$USER${UI_COL_RESET} ($HOME)"
         if [[ "$action" == "install" ]]; then
             engine_install_home "$HOME" "$USER" "$REPO_ROOT" || ((error_count++))
         else
@@ -132,18 +123,10 @@ cmd_install_uninstall() {
     return "$EXIT_OK"
 }
 
-# @description Führt Diagnosen für einen oder mehrere Benutzer aus.
-# @param $1 Diagnose-Modus ("health", "checksymlinks" oder "doctor").
-# @param $2 Betriebssystem ("linux" oder "windows").
-# @param $3 Flag für alle Benutzer (0 oder 1).
-# @param $4 Spezifischer Benutzername (optional).
-# @stdout Detaillierte Diagnoseberichte und Zusammenfassung.
-# @return EXIT_OK, EXIT_WARN oder EXIT_FATAL.
 cmd_health_checks() {
     local action="$1" os="$2" all="$3" user="$4"
     local total_warns=0 total_errors=0
 
-    # Interner Zähler für Status-Aggregation.
     update_counters() {
         case "$1" in
             "$EXIT_OK")    return 0 ;;
@@ -152,10 +135,9 @@ cmd_health_checks() {
         esac
     }
 
-    # Führt die Checks für ein einzelnes Home-Dir aus.
     run_check_single() {
         local u="$1" h="$2" ret=0
-        echo -e "\n${COL_BLUE}>>>${COL_RESET} ${STYLE_BOLD}Diagnose für: $u${COL_RESET}"
+        echo -e "\n${UI_COL_BLUE}>>>${UI_COL_RESET} ${STYLE_BOLD}Diagnose für: $u${UI_COL_RESET}"
 
         if [[ "$action" == "health" || "$action" == "doctor" ]]; then
             ret=0; checks_health "$h" "$u" "$REPO_ROOT" || ret=$?
@@ -188,7 +170,7 @@ cmd_health_checks() {
         run_check_single "$u" "$h"
     done
 
-    echo -e "\n${STYLE_HEADER_BG} ZUSAMMENFASSUNG ${COL_RESET}"
+    echo -e "\n${STYLE_HEADER_BG} ZUSAMMENFASSUNG ${UI_COL_RESET}"
     if [[ $total_errors -gt 0 ]]; then
         log_error "Fehlgeschlagen mit ${total_errors} Fehlern."
         exit "$EXIT_FATAL"
@@ -207,8 +189,6 @@ cmd_health_checks() {
 # 4. MAIN ENTRY POINT
 # ──────────────────────────────────────────────────────────────
 
-# @description Hauptfunktion zum Parsen der Argumente und Routing der Befehle.
-# @param $@ Alle Kommandozeilenargumente.
 main() {
     DRY_RUN=0
     STRICT_MODE_INTERNAL=0
@@ -242,6 +222,7 @@ main() {
         *) die "Betriebssystem nicht unterstützt: ${os_type}" ;;
     esac
 
+    # Initialisierung der Plattform-spezifischen Bibliotheken
     case "$os" in
         linux)   platform_linux_init ;;
         windows) platform_windows_init ;;

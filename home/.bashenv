@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # FILE: home/.bashenv
 # ──────────────────────────────────────────────────────────────
@@ -8,15 +9,27 @@
 # Abhängigkeiten: libcolors.sh (optional für Manpage-Farben).
 # ──────────────────────────────────────────────────────────────
 
-# @section 0. Farbauflösung (Basis laden)
-# Lädt die atomaren Farbcodes für konsistente UI-Elemente.
+# @section 0. Plattform-Erkennung & Farbauflösung
+# Ermittelt das Betriebssystem und lädt Farbcodes für UI-Elemente.
+case "$(uname -s)" in
+    Linux*)  export PLATFORM="linux" ;;
+    MINGW*)  export PLATFORM="windows" ;;
+    *)       export PLATFORM="unknown" ;;
+esac
+
 DOT_REPO="${DOTFILES_REPO_PATH:-$HOME/.dotfiles}"
 COLOR_LIB="${DOT_REPO}/lib/libcolors.sh"
+CONST_LIB="${DOT_REPO}/lib/libconstants.sh"
 
 if [[ -f "$COLOR_LIB" ]]; then
-    # Wir sourcen die Library, um ESC_START/END und COL_* verfügbar zu haben
     # shellcheck disable=SC1090
     source "$COLOR_LIB"
+fi
+
+if [[ -f "$CONST_LIB" ]]; then
+    # Wir laden die Konstanten für den Zugriff auf UI_COL_*
+    # shellcheck disable=SC1090
+    source "$CONST_LIB"
 fi
 
 # @section 1. Pfad-Initialisierung
@@ -44,13 +57,13 @@ shopt -s globstar     # Erlaubt rekursive Suche mit **
 if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
     export MANPAGER="less -s -M +Gg"
 
-    # Nutzung der konsistenten COL_ Variablen aus libcolors.sh
-    export LESS_TERMCAP_mb="${ESC_START}${COL_RED}${ESC_END}"      # Blinkend
-    export LESS_TERMCAP_md="${ESC_START}${ATTR_BOLD};33${ESC_END}"  # Headlines (Gelb Fett)
-    export LESS_TERMCAP_me="${ESC_START}${ATTR_RESET}${ESC_END}"    # Ende aller Modi
-    export LESS_TERMCAP_se="${ESC_START}${ATTR_RESET}${ESC_END}"    # Ende Standout
-    export LESS_TERMCAP_so="${ESC_START}01;44;33${ESC_END}"         # Statuszeile
-    export LESS_TERMCAP_ue="${ESC_START}${ATTR_RESET}${ESC_END}"    # Ende Unterstreichung
+    # Nutzung der konsistenten UI_COL_ Variablen aus v1.2.1
+    export LESS_TERMCAP_mb="${ESC_START}${UI_COL_RED}${ESC_END}"       # Blinkend
+    export LESS_TERMCAP_md="${ESC_START}${ATTR_BOLD};33${ESC_END}"     # Headlines (Gelb Fett)
+    export LESS_TERMCAP_me="${ESC_START}${ATTR_RESET}${ESC_END}"       # Ende aller Modi
+    export LESS_TERMCAP_se="${ESC_START}${ATTR_RESET}${ESC_END}"       # Ende Standout
+    export LESS_TERMCAP_so="${ESC_START}01;44;33${ESC_END}"            # Statuszeile
+    export LESS_TERMCAP_ue="${ESC_START}${ATTR_RESET}${ESC_END}"       # Ende Unterstreichung
     export LESS_TERMCAP_us="${ESC_START}${ATTR_UNDERLINE};32${ESC_END}" # Unterstrichen (Grün)
 fi
 
@@ -59,7 +72,7 @@ fi
 if [[ -n "${SSH_CONNECTION:-}" ]]; then
     export TMOUT=0
     if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-        export LC_ALL="de_DE.UTF-8"
+        export LC_ALL="C.UTF-8" # v1.2.1 Fix: Neutrales UTF-8 für Kompatibilität
     else
         export LC_ALL="en_US.UTF-8"
     fi

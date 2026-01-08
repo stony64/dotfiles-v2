@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # FILE: home/.bashexports
 # ──────────────────────────────────────────────────────────────
@@ -23,9 +24,9 @@ else
     # Windows-Spezifische Editoren (Git Bash / MSYS2 Pfade)
     # Bevorzugt Notepad++ oder VS Code, falls im PATH vorhanden
     if command -v notepad++.exe >/dev/null 2>&1; then
-        export EDITOR="notepad++.exe"
+        export EDITOR="notepad++.exe -multiInst -notabbar -nosession"
     elif [[ -f "/c/Program Files/Notepad++/notepad++.exe" ]]; then
-        export EDITOR="/c/Program Files/Notepad++/notepad++.exe"
+        export EDITOR="'/c/Program Files/Notepad++/notepad++.exe' -multiInst -notabbar -nosession"
     else
         export EDITOR="notepad.exe"
     fi
@@ -44,8 +45,9 @@ export LESS="-RFX"
 # @section 2. Sprache / Zeichensatz (Locale)
 # Sicherstellung einer korrekten Darstellung von Umlauten.
 if [[ "${PLATFORM:-unknown}" == "linux" ]]; then
-    export LANG="de_DE.UTF-8"
-    export LC_ALL="de_DE.UTF-8"
+    # v1.2.1 Standard: C.UTF-8 ist universell auf Linux-Systemen vorhanden
+    export LANG="C.UTF-8"
+    export LC_ALL="C.UTF-8"
 else
     export LANG="en_US.UTF-8"
     export LC_ALL="en_US.UTF-8"

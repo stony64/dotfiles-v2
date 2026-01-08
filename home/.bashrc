@@ -28,10 +28,11 @@ if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
 fi
 
 # Zentrale Variable für plattformabhängige Logik in Untermodulen.
+# v1.2.1 Sync: Identisch mit der Logik in .bashenv für Redundanz-Sicherheit.
 case "$(uname -s)" in
-    Linux)                  export PLATFORM="linux" ;;
-    MINGW*|MSYS*|CYGWIN*)   export PLATFORM="windows" ;;
-    *)                      export PLATFORM="unknown" ;;
+    Linux*)                export PLATFORM="linux" ;;
+    MINGW*|MSYS*|CYGWIN*)  export PLATFORM="windows" ;;
+    *)                     export PLATFORM="unknown" ;;
 esac
 
 # ──────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ for file in "${BASH_MODULES[@]}"; do
     if [[ -f "$file" ]]; then
         # shellcheck disable=SC1090
         if ! source "$file"; then
+            # Fallback-Farbe (Rot), falls libcolors noch nicht geladen wurde
             echo -e "\e[31m[!] Fehler beim Laden von: $(basename "$file")\e[0m" >&2
         fi
     fi
@@ -63,7 +65,7 @@ done
 if command -v set_bash_prompt >/dev/null 2>&1; then
     set_bash_prompt
 else
-    # Simpler Fallback-Prompt für den Notfall
+    # Simpler Fallback-Prompt für den Notfall (ohne UI_COL_ Abhängigkeit)
     PS1='\[\e[32m\]\u@\h\[\e[0m\]:\[\e[34m\]\w\[\e[0m\]\$ '
 fi
 
@@ -75,6 +77,7 @@ if ! shopt -oq posix; then
     readonly BC_PATHS=(
         "/usr/share/bash-completion/bash_completion"
         "/etc/bash_completion"
+        "/usr/local/etc/bash_completion"
         "/usr/share/git/completion/git-completion.bash"
         "/usr/share/bash-completion/completions/git"
     )
@@ -90,8 +93,8 @@ fi
 # ──────────────────────────────────────────────────────────────
 # 5. LOKALE ANPASSUNGEN & EDITOR-FIXES
 # ──────────────────────────────────────────────────────────────
-# Deaktiviert XON/XOFF Flow Control (erlaubt Ctrl+S in Nano).
-stty -ixon 2>/dev/null
+# Deaktiviert XON/XOFF Flow Control (erlaubt Ctrl+S in Nano/Micro).
+[[ -t 0 ]] && stty -ixon 2>/dev/null
 
 # Lädt optionale, systemspezifische Overrides (nicht im Git).
 [[ -f "$HOME/.bashrc_local" ]] && source "$HOME/.bashrc_local"

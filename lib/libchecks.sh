@@ -2,17 +2,18 @@
 #
 # FILE: lib/libchecks.sh
 # ──────────────────────────────────────────────────────────────
-# SYSTEM-DIAGNOSEN UND INTEGRITÄTSPRÜFUNGEN
+# SYSTEM-DIAGNOSEN UND INTEGRITÄTSPRÜFUNGEN (v1.2.1)
 # ──────────────────────────────────────────────────────────────
-# Zweck:    Validierung der Systemumgebung, Pfadauflösung und
-#           Überprüfung der Symlink-Integrität.
-# Abhängigkeiten: libcolors.sh, libconstants.sh, libcommon.sh
+# Zweck:     Validierung der Systemumgebung und Symlink-Check.
+# Korrektur: Namespace-Sync (UI_COL_) & Include-Guards.
 # ──────────────────────────────────────────────────────────────
+
+# 1. INCLUDE GUARD
+[[ -n "${_LIB_CHECKS_LOADED:-}" ]] && return
+readonly _LIB_CHECKS_LOADED=1
 
 # @description Ermittelt den absoluten Zielpfad einer Datei oder eines Symlinks.
 # @param $1 Pfad, der aufgelöst werden soll.
-# @stdout Der kanonische (absolute) Pfad.
-# @return EXIT_OK (0)
 canon_path() {
     local p="$1"
 
@@ -21,23 +22,17 @@ canon_path() {
         p=$(readlink -f "$p" 2>/dev/null || realpath "$p" 2>/dev/null || echo "$p")
     fi
 
-    # 2. Absoluten Pfad sicherstellen (Portabilität für Linux/BSD/Windows)
-    if has_cmd readlink && readlink -f / >/dev/null 2>&1; then
+    # 2. Absoluten Pfad sicherstellen
+    if command -v readlink >/dev/null 2>&1 && readlink -f / >/dev/null 2>&1; then
         readlink -f "$p" 2>/dev/null
-    elif has_cmd realpath; then
+    elif command -v realpath >/dev/null 2>&1; then
         realpath "$p" 2>/dev/null
     else
         printf '%s\n' "$p"
     fi
-    return "$EXIT_OK"
 }
 
-# @description Prüft das System auf notwendige Abhängigkeiten und Verzeichnisse.
-# @param $1 Home-Verzeichnis des Ziel-Users.
-# @param $2 Benutzername.
-# @param $3 Root-Pfad des Repositories.
-# @stdout Statusmeldungen zum Prüfprozess (Erfolg/Fehler).
-# @return EXIT_OK oder EXIT_FATAL.
+# @description Prüft das System auf notwendige Abhängigkeiten.
 checks_health() {
     local home_dir="$1" user_name="$2" repo_root="$3"
     local fatal_errors=0
@@ -47,8 +42,8 @@ checks_health() {
     # Benötigte CLI-Tools verifizieren
     local cmd
     for cmd in git ln rm mkdir cp; do
-        if has_cmd "$cmd"; then
-            echo -e "    ${COL_GREEN}${SYMBOL_OK}${COL_RESET} Befehl '$cmd' gefunden."
+        if command -v "$cmd" >/dev/null 2>&1; then
+            echo -e "    ${UI_COL_GREEN}${SYMBOL_OK}${UI_COL_RESET} Befehl '$cmd' gefunden."
         else
             log_error "Befehl '$cmd' fehlt auf dem System."
             ((fatal_errors++))
@@ -71,11 +66,6 @@ checks_health() {
 }
 
 # @description Validiert den Status aller Symlinks gemäß der DOTFILES_WHITELIST.
-# @param $1 Home-Verzeichnis des Ziel-Users.
-# @param $2 Benutzername.
-# @param $3 Root-Pfad des Repositories.
-# @stdout Detaillierte Liste des Link-Status pro Datei.
-# @return EXIT_OK oder EXIT_WARN.
 checks_check_symlinks() {
     local home_dir="$1" user_name="$2" repo_root="$3"
     local warnings=0
@@ -89,30 +79,29 @@ checks_check_symlinks() {
 
         # 1. Existenz im Repo prüfen
         if [[ ! -e "$src" ]]; then
-            echo -e "    ${COL_YELLOW}${SYMBOL_WARN}${COL_RESET} Quelle fehlt im Repo: ${file}"
+            echo -e "    ${UI_COL_YELLOW}${SYMBOL_WARN}${UI_COL_RESET} Quelle fehlt im Repo: ${file}"
             ((warnings++))
             continue
         fi
 
         # 2. Verknüpfungs-Status im Home prüfen
         if [[ -L "$dest" ]]; then
-            # Pfadvergleich der kanonischen Ziele
             local canon_dest_target
             local canon_src
             canon_dest_target="$(canon_path "$dest")"
             canon_src="$(canon_path "$src")"
 
             if [[ "$canon_dest_target" == "$canon_src" ]]; then
-                echo -e "    ${COL_GREEN}${SYMBOL_OK}${COL_RESET} ${file}: Korrekt verlinkt."
+                echo -e "    ${UI_COL_GREEN}${SYMBOL_OK}${UI_COL_RESET} ${file}: Korrekt verlinkt."
             else
-                echo -e "    ${COL_YELLOW}${SYMBOL_WARN}${COL_RESET} ${file}: Zeigt auf falsches Ziel."
+                echo -e "    ${UI_COL_YELLOW}${SYMBOL_WARN}${UI_COL_RESET} ${file}: Zeigt auf falsches Ziel."
                 ((warnings++))
             fi
         elif [[ -e "$dest" ]]; then
-            echo -e "    ${COL_YELLOW}${SYMBOL_WARN}${COL_RESET} ${file}: Reale Datei blockiert Link."
+            echo -e "    ${UI_COL_YELLOW}${SYMBOL_WARN}${UI_COL_RESET} ${file}: Reale Datei blockiert Link."
             ((warnings++))
         else
-            echo -e "    ${COL_RED}${SYMBOL_ERROR}${COL_RESET} ${file}: Link fehlt."
+            echo -e "    ${UI_COL_RED}${SYMBOL_ERROR}${UI_COL_RESET} ${file}: Link fehlt."
             ((warnings++))
         fi
     done

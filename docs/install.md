@@ -4,19 +4,17 @@ Diese Anleitung beschreibt die saubere Einrichtung des Dotfiles-Systems auf Linu
 
 ## 📋 1. Voraussetzungen
 
-Bevor du beginnst, stelle sicher, dass folgende Anforderungen erfüllt sind:
-
 ### Global
 
-- **Bash:** Version 4.0 oder höher erforderlich (`bash --version`).
-- **Git:** Erforderlich für Updates und Versionierung.
+* **Bash:** Version 4.0 oder höher erforderlich (`bash --version`).
+* **Git:** Erforderlich für Updates und Repository-Management.
 
 ### Windows (Git Bash / MSYS2)
 
 Das System nutzt native NTFS-Symlinks. Damit dies ohne Administratorrechte funktioniert:
 
 1. **Entwicklermodus aktivieren:** `Einstellungen -> Datenschutz und Sicherheit -> Für Entwickler -> Entwicklermodus: EIN`.
-2. **Git Bash:** Muss aktuell sein, um MSYS-Pfade korrekt aufzulösen.
+2. **Umgebung:** Starte die Git Bash nach Aktivierung des Entwicklermodus neu.
 
 ---
 
@@ -24,17 +22,17 @@ Das System nutzt native NTFS-Symlinks. Damit dies ohne Administratorrechte funkt
 
 ### Schritt A: Repository klonen
 
-Es wird empfohlen, das Repository in einen versteckten Ordner in deinem Home-Verzeichnis zu klonen:
+Klonen Sie das Repository direkt in den Zielordner:
 
 ```bash
-git clone [https://github.com/dein-user/dotfiles.git](https://github.com/dein-user/dotfiles.git) ~/.dotfiles
+git clone https://github.com/stony64/dotfiles-v2.git ~/.dotfiles
 cd ~/.dotfiles
 
 ```
 
-### Schritt B: Systemdiagnose (Wichtig!)
+### Schritt B: Systemdiagnose
 
-Führe den integrierten „Doctor“ aus, um sicherzustellen, dass dein System bereit für die Symlink-Erstellung ist:
+Bevor Änderungen vorgenommen werden, prüft der „Doctor“ die Schreibrechte und Tools:
 
 ```bash
 ./dotfilesctl.sh doctor
@@ -43,19 +41,13 @@ Führe den integrierten „Doctor“ aus, um sicherzustellen, dass dein System b
 
 ### Schritt C: Installation ausführen
 
-Wenn die Diagnose grün ist, kannst du die Installation starten.
-
-**Unter Linux:**
-Hier muss explizit der Benutzer angegeben werden (oder `--all-users` als Root):
+Wenn die Diagnose grün ist (Symbol: `[OK]`), führen Sie die Installation aus. Wir empfehlen den `--dry-run` Modus für den ersten Testlauf:
 
 ```bash
-./dotfilesctl.sh install --user $(whoami)
+# Optional: Simulation starten
+./dotfilesctl.sh install --dry-run
 
-```
-
-**Unter Windows:**
-
-```bash
+# Reale Installation
 ./dotfilesctl.sh install
 
 ```
@@ -64,12 +56,11 @@ Hier muss explizit der Benutzer angegeben werden (oder `--all-users` als Root):
 
 ## 🧪 3. Verifizierung
 
-Nach der Installation solltest du prüfen, ob die Shell-Module korrekt geladen werden:
+Um die neue Umgebung zu aktivieren und zu testen:
 
-1. Starte dein Terminal neu oder führe `source ~/.bashrc` aus.
-2. Prüfe den Prompt: Erscheint der Branch-Name, wenn du in ein Git-Repo wechselst?
-3. Teste einen Alias: Tippe `ll` oder `..`.
-4. Teste den Controller-Alias: Tippe `dctl doctor`.
+1. **Shell neu laden:** `source ~/.bashrc`
+2. **Prompt-Test:** Navigiere in ein Git-Verzeichnis – der Branch-Name sollte farbig erscheinen.
+3. **Alias-Test:** Tippe `dctl doctor` – der Alias für den Controller muss sofort funktionieren.
 
 ---
 
@@ -77,29 +68,29 @@ Nach der Installation solltest du prüfen, ob die Shell-Module korrekt geladen w
 
 ### Fehler: "Operation not permitted" (Windows)
 
-Dies bedeutet, dass Windows das Erstellen von Symlinks blockiert.
-
-- **Lösung:** Stelle sicher, dass der **Entwicklermodus** (siehe oben) aktiviert ist. Ein Neustart der Git Bash ist danach zwingend erforderlich.
-
-### Fehler: "Bash version too old"
-
-Manche MacOS-Versionen nutzen standardmäßig Bash 3.2.
-
-- **Lösung:** Installiere eine aktuelle Bash via Homebrew (`brew install bash`) und setze sie als Standard-Shell.
+* **Ursache:** Fehlende Berechtigung für native Symlinks.
+* **Lösung:** Entwicklermodus aktivieren (siehe Punkt 1). Falls es weiterhin scheitert, prüfen Sie mit `echo $MSYS`, ob `winsymlinks:nativestrict` gesetzt ist.
 
 ### Fehler: Konflikte mit existierenden Dateien
 
-Falls eine `.bashrc` bereits existiert, wird die Engine diese sichern (`.bashrc.bak`), bevor der Symlink erstellt wird. Du kannst deine alten Anpassungen dann manuell in die `~/.bashrc_local` übertragen.
+* **Verhalten:** Die Engine überschreibt niemals "echte" Dateien ohne Backup.
+* **Lösung:** Wenn die Engine meldet `SKIP: Ziel existiert bereits`, benenne deine alte Datei manuell um oder lösche sie, falls sie nicht mehr benötigt wird.
+
+### Best Practice: Lokale Anpassungen
+
+Nutze die Datei `~/.bashrc_local` für Einstellungen, die **nicht** in das öffentliche Git-Repository gehören (z. B. private Aliase oder spezifische Exporte). Diese Datei wird automatisch von der `.bashrc` geladen, falls sie existiert.
 
 ---
 
 ## 🔄 5. Deinstallation
 
-Möchtest du das System sauber entfernen, ohne deine Backups zu verlieren:
+Das System kann jederzeit rückstandslos entfernt werden:
 
 ```bash
 ./dotfilesctl.sh uninstall
 
 ```
 
-Dieser Befehl entfernt nur die vom System erstellten Symlinks und lässt deine `.bak` Dateien unberührt.
+*Hinweis: Erstellte Backups (`.bak`) werden zur Sicherheit nicht automatisch gelöscht.*
+
+---

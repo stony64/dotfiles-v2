@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # FILE: home/.bashaliases
 # ──────────────────────────────────────────────────────────────
@@ -61,13 +62,13 @@ elif [[ "${PLATFORM:-unknown}" == "windows" ]]; then
     alias explorer='explorer . '
     alias code='code . '
     # Schneller Sprung in das Windows-Heimatverzeichnis
-    alias cuser='cd /c/Users/$USER'
+    alias cuser='cd "/c/Users/${USER}"'
 fi
 
 # @section Projekt-Spezifisch
 # Zentraler Zugriffspunkt für das Dotfiles-Management-Skript.
 # Nutzt dynamisch $HOME, um unabhängig vom absoluten Pfad zu bleiben.
-alias dctl="${HOME}/dotfiles/dotfilesctl.sh"
+alias dctl="${HOME}/.dotfiles/dotfilesctl.sh"
 
 # @section Utilities & Debugging
 # Hilfswerkzeuge für die Shell-Konfiguration.
