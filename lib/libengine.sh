@@ -7,8 +7,9 @@
 # └───────────────────────────────────────────────────────────────────────────┘
 
 # INCLUDE GUARD
-[[ -n "${_LIB_ENGINE_LOADED:-}" ]] && return
-readonly _LIB_ENGINE_LOADED=1
+# Include-Guard (verhindert Mehrfachladen und schützt vor readonly-Fehlern)
+[[ -n "${_LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED:-}" ]] && return
+declare -g _LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED=1
 
 # @description Erstellt einen Symlink idempotent und sichert reale Dateien.
 # @param $1 Quell-Pfad (absolut, im Repository).

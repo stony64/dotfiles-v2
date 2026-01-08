@@ -6,9 +6,9 @@
 # │ STANDARDS: set -euo pipefail, Bash >= 4.0, Google Shell Style Guide       │
 # └───────────────────────────────────────────────────────────────────────────┘
 
-# INCLUDE GUARD
-[[ -n "${_LIB_CONSTANTS_LOADED:-}" ]] && return
-readonly _LIB_CONSTANTS_LOADED=1
+# INCLUDE GUARD# Include-Guard (verhindert Mehrfachladen und schützt vor readonly-Fehlern)
+[[ -n "${_LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED:-}" ]] && return
+declare -g _LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED=1
 
 # 1. LOCALE FIX
 # Erzwingt UTF-8 für konsistente Symbol-Darstellung und Sortierung.

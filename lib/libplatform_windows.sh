@@ -7,8 +7,9 @@
 # └───────────────────────────────────────────────────────────────────────────┘
 
 # INCLUDE GUARD
-[[ -n "${_LIB_PLATFORM_WINDOWS_LOADED:-}" ]] && return
-readonly _LIB_PLATFORM_WINDOWS_LOADED=1
+# Include-Guard (verhindert Mehrfachladen und schützt vor readonly-Fehlern)
+[[ -n "${_LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED:-}" ]] && return
+declare -g _LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED=1
 
 # @description Initialisiert die Windows-Umgebung für native Symlinks.
 # Erzwingt MSYS-Verhalten, das echte NTFS-Symlinks statt Kopien erstellt.

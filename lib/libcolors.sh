@@ -7,9 +7,9 @@
 # └───────────────────────────────────────────────────────────────────────────┘
 
 # INCLUDE GUARD
-# Verhindert mehrfaches Laden und Kollisionen mit readonly Variablen.
-[[ -n "${_LIB_COLORS_LOADED:-}" ]] && return
-readonly _LIB_COLORS_LOADED=1
+# Include-Guard (verhindert Mehrfachladen und schützt vor readonly-Fehlern)
+[[ -n "${_LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED:-}" ]] && return
+declare -g _LIB_$(basename "${BASH_SOURCE[0]}" .sh | tr '[:lower:]' '[:upper:]')_LOADED=1
 
 # @section Steuerzeichen
 # ESC-Sequenz-Begrenzer für den dynamischen Zusammenbau in libconstants.sh
