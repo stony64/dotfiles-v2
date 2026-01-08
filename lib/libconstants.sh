@@ -58,7 +58,6 @@ readonly DOTFILES_WHITELIST=(
     ".bashprompt"
     ".bashaliases"
     ".bashfunctions"
-    ".bashwartung"
     ".dircolors"
     ".nanorc"
 )
