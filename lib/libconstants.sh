@@ -30,13 +30,13 @@ readonly SYMBOL_INFO="ℹ"
 # 4. CLI-FARBEN (Zusammengesetzt aus libcolors.sh)
 # Wir nutzen die atomaren Werte aus libcolors.sh, um finale Sequenzen zu bilden.
 # Fallback auf leere Strings, falls libcolors.sh nicht geladen ist.
-readonly UI_COL_RED="${UI_ESC_START:-}${UI_COL_RED:-}${UI_ESC_END:-}"
-readonly UI_COL_GREEN="${UI_ESC_START:-}${UI_COL_GREEN:-}${UI_ESC_END:-}"
-readonly UI_COL_YELLOW="${UI_ESC_START:-}${UI_COL_YELLOW:-}${UI_ESC_END:-}"
-readonly UI_COL_BLUE="${UI_ESC_START:-}${UI_COL_BLUE:-}${UI_ESC_END:-}"
-readonly UI_COL_MAGENTA="${UI_ESC_START:-}${UI_COL_MAGENTA:-}${UI_ESC_END:-}"
-readonly UI_COL_CYAN="${UI_ESC_START:-}${UI_COL_CYAN:-}${UI_ESC_END:-}"
-readonly UI_COL_WHITE="${UI_ESC_START:-}${UI_COL_WHITE:-}${UI_ESC_END:-}"
+readonly UI_COL_RED="${UI_ESC_START:-}${UI_VAL_RED:-}${UI_ESC_END:-}"
+readonly UI_COL_GREEN="${UI_ESC_START:-}${UI_VAL_GREEN:-}${UI_ESC_END:-}"
+readonly UI_COL_YELLOW="${UI_ESC_START:-}${UI_VAL_YELLOW:-}${UI_ESC_END:-}"
+readonly UI_COL_BLUE="${UI_ESC_START:-}${UI_VAL_BLUE:-}${UI_ESC_END:-}"
+readonly UI_COL_MAGENTA="${UI_ESC_START:-}${UI_VAL_MAGENTA:-}${UI_ESC_END:-}"
+readonly UI_COL_CYAN="${UI_ESC_START:-}${UI_VAL_CYAN:-}${UI_ESC_END:-}"
+readonly UI_COL_WHITE="${UI_ESC_START:-}${UI_VAL_WHITE:-}${UI_ESC_END:-}"
 readonly UI_COL_RESET="${UI_ESC_START:-}${UI_ATTR_RESET:-}${UI_ESC_END:-}"
 
 # 5. TEXT-STILE
