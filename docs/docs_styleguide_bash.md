@@ -12,7 +12,6 @@ Dieses Dokument definiert die verbindlichen Standards für die Entwicklung und E
 * `-u`: Fehler bei Zugriff auf ungesetzte Variablen.
 * `-o pipefail`: Erkennt Fehler innerhalb von Pipelines (nicht nur am Ende).
 
-
 * **Plattform-Agnostik:** Nutze immer die globale Variable `$PLATFORM` (`linux`|`windows`) für OS-spezifische Pfade oder Logik-Weichen.
 
 ## 2. Datei-Struktur & Header
@@ -79,11 +78,10 @@ Da das Projekt native Windows-Symlinks unterstützt, gelten folgende Regeln:
 1. **Pfad-Handling:** Nutze `$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)`, um das Skript-Verzeichnis robust zu ermitteln.
 2. **Quoting:** **Jede** Variable, die einen Pfad enthält, muss in doppelten Anführungszeichen stehen: `"$path"`.
 3. **Typprüfung:** Nutze spezifische Flags für Tests:
+
 * `[[ -L "$path" ]]` prüft auf (Sym-)Links.
 * `[[ -f "$path" ]]` prüft auf echte Dateien.
 * `[[ -e "$path" ]]` prüft auf allgemeine Existenz.
-
-
 
 ## 7. Statische Analyse (Shellcheck)
 
