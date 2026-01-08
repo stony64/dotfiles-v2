@@ -1,7 +1,7 @@
-#
 # ┌───────────────────────────────────────────────────────────────────────────┐
 # │ FILE: home/.dircolors                                                     │
 # │ ZWECK: Optimierte Farbdarstellung für LS (DIRCOLORS)                      │
+# │ VERSION: 1.2.2 (Compatibility Fix)                                        │
 # │ STANDARDS: Linux & Windows (Git Bash) kompatibel                          │
 # └───────────────────────────────────────────────────────────────────────────┘
 
@@ -17,14 +17,14 @@ TERM linux
 NORMAL 00           # Standard-Text
 FILE 00             # Normale Datei
 DIR 01;34           # Verzeichnis: Bold Blue
-LINK 01;36          # Symlink: Bold Cyan (gut unterscheidbar von Dir)
+LINK 01;36          # Symlink: Bold Cyan
 MULTIHARDLINK 00
 FIFO 40;33          # Pipes: Gelb auf Schwarz
 SOCK 01;35          # Sockets: Bold Magenta
 DOOR 01;35
 BLK 40;33;01        # Block Devices
 CHR 40;33;01        # Character Devices
-ORPHAN 01;31;40     # Kaputter Symlink: Fett Rot (Warnung)
+ORPHAN 01;31;40     # Kaputter Symlink: Fett Rot
 MISSING 00
 EXEC 01;32          # Ausführbare Dateien: Bold Green
 
@@ -36,10 +36,7 @@ SETGID 30;43
 CAPABILITY 30;41
 STICKY 37;44
 
-# @fix: Git Bash/NTFS Problem
-# Standardmäßig markiert 'ls' Verzeichnisse unter Windows oft mit
-# grünem Hintergrund (OTHER_WRITABLE), was den Text unlesbar macht.
-# Hier erzwingen wir ein sauberes Blau ohne Hintergrund.
+# @fix: Git Bash/NTFS Problem (Kein grüner Hintergrund bei 'others writable')
 STICKY_OTHER_WRITABLE 01;34;40
 OTHER_WRITABLE 01;34;40
 
@@ -77,9 +74,9 @@ OTHER_WRITABLE 01;34;40
 .ps1 01;32
 .bat 01;32
 .exe 01;32
-Makefile 01;32
-makefile 01;32
-CMakeLists.txt 01;32
+*Makefile 01;32
+*makefile 01;32
+*CMakeLists.txt 01;32
 
 # ──────────────────────────────────────────────────────────────
 # 5. KONFIGURATION & DATEN (YELLOW)
@@ -98,10 +95,10 @@ CMakeLists.txt 01;32
 # ──────────────────────────────────────────────────────────────
 # 6. DOKUMENTATION (WHITE / BOLD WHITE)
 # ──────────────────────────────────────────────────────────────
-README 01;37
-README.md 01;37
-LICENSE 01;37
-COPYING 01;37
+*README 01;37
+*README.md 01;37
+*LICENSE 01;37
+*COPYING 01;37
 .md 00;37
 .txt 00;37
 .pdf 00;37
